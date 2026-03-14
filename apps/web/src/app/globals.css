@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-cream font-body text-ink;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(circle at top left, rgba(255, 222, 89, 0.65), transparent 28%),
+    linear-gradient(135deg, #fff9df 0%, #ffd7e2 45%, #85d5ff 100%);
+}
+
+@layer components {
+  .neo-card {
+    @apply rounded-[1.75rem] border-4 border-black shadow-neo;
+  }
+
+  .neo-badge {
+    @apply inline-flex items-center rounded-full border-4 border-black px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-ink shadow-neoSm;
+  }
+
+  .neo-button {
+    @apply inline-flex items-center justify-center rounded-2xl border-4 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-ink shadow-neoSm transition-transform duration-150 hover:-translate-y-1 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .neo-input {
+    @apply w-full rounded-2xl border-4 border-black bg-white px-4 py-3 text-base font-bold text-ink shadow-neoSm outline-none transition-transform duration-150 placeholder:text-black/45 focus:-translate-y-1 focus:shadow-neo;
+  }
+}

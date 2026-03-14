@@ -1,0 +1,15 @@
+{
+  "name": "drive-app",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev --workspace @drive/api",
+    "dev:web": "npm run dev --workspace @drive/web",
+    "build": "npm run build --workspace @drive/api && npm run build --workspace @drive/web",
+    "lint": "npm run lint --workspace @drive/api && npm run lint --workspace @drive/web",
+    "format": "npm run format --workspace @drive/api && npm run format --workspace @drive/web"
+  }
+}
