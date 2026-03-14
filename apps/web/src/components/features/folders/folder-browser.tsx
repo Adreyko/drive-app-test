@@ -21,11 +21,15 @@ import {
   useRenameFolderMutation,
 } from '@/api/folders/folders.queries';
 import type { FolderItem } from '@/api/folders/folders.model';
+import { useShareFileMutation } from '@/api/sharing/sharing.queries';
+import type { ShareRole } from '@/api/sharing/sharing.model';
 import { getApiErrorMessage, isUnauthorizedError } from '@/api/client';
 import { FileList } from '@/components/features/files/file-list';
 import type { FileFolderOption } from '@/components/features/files/file-card';
 import { FilePreviewModal } from '@/components/features/files/file-preview-modal';
+import { SharedFilesPanel } from '@/components/features/files/shared-files-panel';
 import { FileUploadPanel } from '@/components/features/files/file-upload-panel';
+import { ShareFileModal } from '@/components/features/sharing/share-file-modal';
 import { Button } from '@/components/ui/button';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { Input } from '@/components/ui/input';
@@ -102,6 +106,7 @@ function buildFolderPathLabel(
 type CurrentFolderPanelProps = Readonly<{
   currentFolder: FolderItem | null;
   errorMessage: string | null;
+  noticeMessage: string | null;
   isPending: boolean;
   onRequestDeleteCurrentFolder: () => void;
   onRenameCurrentFolder: (nextName: string) => Promise<void>;
@@ -112,6 +117,7 @@ type CurrentFolderPanelProps = Readonly<{
 function CurrentFolderPanel({
   currentFolder,
   errorMessage,
+  noticeMessage,
   isPending,
   onRequestDeleteCurrentFolder,
   onRenameCurrentFolder,
@@ -178,6 +184,12 @@ function CurrentFolderPanel({
             {errorMessage}
           </div>
         ) : null}
+
+        {noticeMessage ? (
+          <div className="neo-card bg-mint p-4 text-sm font-bold text-ink">
+            {noticeMessage}
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -189,11 +201,14 @@ export function FolderBrowser() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(null);
+  const [isUploadPublicView, setIsUploadPublicView] = useState(false);
   const [isCurrentFolderDeleteModalOpen, setIsCurrentFolderDeleteModalOpen] =
     useState(false);
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [shareFile, setShareFile] = useState<FileItem | null>(null);
   const foldersQuery = useFoldersQuery();
   const filesQuery = useFilesQuery();
   const createFolderMutation = useCreateFolderMutation();
@@ -203,14 +218,19 @@ export function FolderBrowser() {
   const updateFileMutation = useUpdateFileMutation();
   const deleteFileMutation = useDeleteFileMutation();
   const downloadFileUrlMutation = useDownloadFileUrlMutation();
+  const shareFileMutation = useShareFileMutation();
   const folders = foldersQuery.data ?? [];
   const files = filesQuery.data ?? [];
+  const ownedFiles = files.filter((file) => file.isOwned);
+  const sharedFiles = files.filter((file) => !file.isOwned);
   const currentFolder =
     folders.find((folder) => folder.id === currentFolderId) ?? null;
   const childFolders = sortFolders(
     folders.filter((folder) => folder.parentId === currentFolderId),
   );
-  const visibleFiles = files.filter((file) => file.folderId === currentFolderId);
+  const visibleFiles = ownedFiles.filter(
+    (file) => file.folderId === currentFolderId,
+  );
   const pathItems = buildBreadcrumbItems(folders, currentFolderId);
   const folderOptions = buildFolderOptions(folders);
   const isMutating =
@@ -219,7 +239,8 @@ export function FolderBrowser() {
     deleteFolderMutation.isPending ||
     uploadFileMutation.isPending ||
     updateFileMutation.isPending ||
-    deleteFileMutation.isPending;
+    deleteFileMutation.isPending ||
+    shareFileMutation.isPending;
 
   useEffect(() => {
     const authError = foldersQuery.error ?? filesQuery.error;
@@ -242,6 +263,7 @@ export function FolderBrowser() {
   async function handleCreateFolder(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActionError(null);
+    setActionNotice(null);
 
     try {
       await createFolderMutation.mutateAsync({
@@ -264,13 +286,16 @@ export function FolderBrowser() {
     }
 
     setActionError(null);
+    setActionNotice(null);
 
     try {
       await uploadFileMutation.mutateAsync({
         file: selectedFile,
         folderId: currentFolderId,
+        visibility: isUploadPublicView ? 'public' : 'private',
       });
       setSelectedFile(null);
+      setIsUploadPublicView(false);
     } catch (error) {
       setActionError(getApiErrorMessage(error, 'Could not upload file.'));
     }
@@ -281,6 +306,7 @@ export function FolderBrowser() {
     nextName: string,
   ): Promise<boolean> {
     setActionError(null);
+    setActionNotice(null);
 
     try {
       await renameFolderMutation.mutateAsync({
@@ -306,6 +332,7 @@ export function FolderBrowser() {
 
   async function handleDeleteFolder(folder: FolderItem): Promise<void> {
     setActionError(null);
+    setActionNotice(null);
 
     try {
       await deleteFolderMutation.mutateAsync(folder.id);
@@ -335,12 +362,14 @@ export function FolderBrowser() {
     input: UpdateFileInput,
   ): Promise<boolean> {
     setActionError(null);
+    setActionNotice(null);
 
     try {
       await updateFileMutation.mutateAsync({
         id: file.id,
         name: input.name,
         folderId: input.folderId,
+        visibility: input.visibility,
       });
 
       return true;
@@ -353,6 +382,7 @@ export function FolderBrowser() {
 
   async function handleDeleteFile(file: FileItem): Promise<void> {
     setActionError(null);
+    setActionNotice(null);
 
     try {
       await deleteFileMutation.mutateAsync(file.id);
@@ -368,6 +398,7 @@ export function FolderBrowser() {
 
   async function handleOpenFile(file: FileItem): Promise<void> {
     setActionError(null);
+    setActionNotice(null);
 
     try {
       const download = await downloadFileUrlMutation.mutateAsync(file.id);
@@ -376,6 +407,28 @@ export function FolderBrowser() {
     } catch (error) {
       setActionError(getApiErrorMessage(error, 'Could not open file.'));
     }
+  }
+
+  async function handleShareFile(input: {
+    email: string;
+    role: ShareRole;
+  }): Promise<void> {
+    if (!shareFile) {
+      return;
+    }
+
+    setActionError(null);
+
+    await shareFileMutation.mutateAsync({
+      email: input.email,
+      fileId: shareFile.id,
+      role: input.role,
+    });
+
+    setActionNotice(
+      `Shared "${shareFile.name}" with ${input.email} as ${input.role}.`,
+    );
+    setShareFile(null);
   }
 
   if (foldersQuery.isLoading) {
@@ -441,6 +494,7 @@ export function FolderBrowser() {
       <CurrentFolderPanel
         currentFolder={currentFolder}
         errorMessage={actionError}
+        noticeMessage={actionNotice}
         isPending={isMutating}
         onRequestDeleteCurrentFolder={() => setIsCurrentFolderDeleteModalOpen(true)}
         onRenameCurrentFolder={handleRenameCurrentFolder}
@@ -451,8 +505,10 @@ export function FolderBrowser() {
       <FileUploadPanel
         currentFolderName={currentFolder?.name ?? null}
         errorMessage={actionError}
+        isPublicView={isUploadPublicView}
         isUploading={uploadFileMutation.isPending}
         onChange={setSelectedFile}
+        onTogglePublicView={setIsUploadPublicView}
         onSubmit={handleUploadFile}
         selectedFile={selectedFile}
       />
@@ -502,6 +558,15 @@ export function FolderBrowser() {
       <FileList
         currentFolderName={currentFolder?.name ?? null}
         files={visibleFiles}
+        folderOptions={folderOptions}
+        onDelete={handleDeleteFile}
+        onOpen={handleOpenFile}
+        onShare={setShareFile}
+        onUpdate={handleUpdateFile}
+      />
+
+      <SharedFilesPanel
+        files={sharedFiles}
         folderOptions={folderOptions}
         onDelete={handleDeleteFile}
         onOpen={handleOpenFile}
@@ -558,6 +623,15 @@ export function FolderBrowser() {
             setPreviewUrl(null);
           }}
           previewUrl={previewUrl}
+        />
+      ) : null}
+
+      {shareFile ? (
+        <ShareFileModal
+          file={shareFile}
+          isSubmitting={shareFileMutation.isPending}
+          onClose={() => setShareFile(null)}
+          onSubmit={handleShareFile}
         />
       ) : null}
 

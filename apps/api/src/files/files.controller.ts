@@ -16,9 +16,11 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { type AuthenticatedUser } from '../auth/interfaces/auth.types';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
+import { ShareFileDto } from './dto/share-file.dto';
 import { UpdateFileDto } from './dto/update-file.dto';
-import { File } from './entities/file.entity';
 import { type DownloadUrlResponse } from './interfaces/download-url-response.interface';
+import { type FileListItem } from './interfaces/file-list-item.interface';
+import { type ShareFileResponse } from './interfaces/share-file-response.interface';
 import { FilesService } from './files.service';
 import { type UploadUrlResponse } from './interfaces/upload-url-response.interface';
 
@@ -28,8 +30,8 @@ export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Get()
-  findAll(@CurrentUser() user: AuthenticatedUser): Promise<File[]> {
-    return this.filesService.findAllForOwner(user.id);
+  findAll(@CurrentUser() user: AuthenticatedUser): Promise<FileListItem[]> {
+    return this.filesService.findAllVisibleForUser(user.id);
   }
 
   @Post('upload-url')
@@ -44,7 +46,7 @@ export class FilesController {
   create(
     @CurrentUser() user: AuthenticatedUser,
     @Body() createFileDto: CreateFileDto,
-  ): Promise<File> {
+  ): Promise<FileListItem> {
     return this.filesService.createMetadataRecord(user.id, createFileDto);
   }
 
@@ -53,7 +55,7 @@ export class FilesController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() updateFileDto: UpdateFileDto,
-  ): Promise<File> {
+  ): Promise<FileListItem> {
     return this.filesService.update(user.id, id, updateFileDto);
   }
 
@@ -72,5 +74,14 @@ export class FilesController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<void> {
     await this.filesService.remove(user.id, id);
+  }
+
+  @Post(':id/share')
+  share(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() shareFileDto: ShareFileDto,
+  ): Promise<ShareFileResponse> {
+    return this.filesService.share(user.id, id, shareFileDto);
   }
 }

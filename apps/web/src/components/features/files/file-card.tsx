@@ -16,6 +16,7 @@ type FileCardProps = Readonly<{
   folderOptions: FileFolderOption[];
   onDelete: (file: FileItem) => Promise<void>;
   onOpen: (file: FileItem) => Promise<void>;
+  onShare?: (file: FileItem) => void;
   onUpdate: (file: FileItem, input: UpdateFileInput) => Promise<boolean>;
 }>;
 
@@ -41,21 +42,38 @@ export function FileCard({
   folderOptions,
   onDelete,
   onOpen,
+  onShare,
   onUpdate,
 }: FileCardProps) {
   const [draftName, setDraftName] = useState(file.name);
   const [draftFolderId, setDraftFolderId] = useState(file.folderId ?? '');
+  const [draftVisibility, setDraftVisibility] = useState(file.visibility);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const locationLabel =
-    folderOptions.find((option) => option.id === file.folderId)?.label ??
-    'Root workspace';
+  const canRename = file.accessRole !== 'viewer';
+  const canMove = file.isOwned;
+  const canDelete = file.isOwned;
+  const canChangeVisibility = file.isOwned;
+  const canShare = file.isOwned && Boolean(onShare);
+  const locationLabel = file.isOwned
+    ? folderOptions.find((option) => option.id === file.folderId)?.label ??
+      'Root workspace'
+    : file.ownerEmail;
+  const accessLabel =
+    file.accessRole === 'owner'
+      ? 'Owner'
+      : file.accessRole === 'editor'
+        ? 'Editor'
+        : 'Viewer';
+  const visibilityLabel =
+    file.visibility === 'public' ? 'Public View' : 'Private';
 
   useEffect(() => {
     setDraftName(file.name);
     setDraftFolderId(file.folderId ?? '');
-  }, [file.folderId, file.name]);
+    setDraftVisibility(file.visibility);
+  }, [file.folderId, file.name, file.visibility]);
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,7 +83,8 @@ export function FileCard({
       const updated = await onUpdate(file, {
         id: file.id,
         name: draftName.trim(),
-        folderId: draftFolderId || null,
+        ...(canMove ? { folderId: draftFolderId || null } : {}),
+        ...(canChangeVisibility ? { visibility: draftVisibility } : {}),
       });
 
       if (updated) {
@@ -109,10 +128,10 @@ export function FileCard({
               {file.name}
             </h3>
           </div>
-          <div className="neo-badge bg-white">File</div>
+          <div className="neo-badge bg-white">{accessLabel}</div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <div className="neo-card bg-white p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
               Size
@@ -121,11 +140,23 @@ export function FileCard({
           </div>
           <div className="neo-card bg-lemon p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
-              Location
+              {file.isOwned ? 'Location' : 'Owner'}
             </p>
             <p className="mt-2 text-sm font-bold text-ink">{locationLabel}</p>
           </div>
           <div className="neo-card bg-mint p-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
+              Access
+            </p>
+            <p className="mt-2 text-sm font-bold text-ink">{accessLabel}</p>
+          </div>
+          <div className="neo-card bg-white p-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
+              Visibility
+            </p>
+            <p className="mt-2 text-sm font-bold text-ink">{visibilityLabel}</p>
+          </div>
+          <div className="neo-card bg-white p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
               Updated
             </p>
@@ -143,18 +174,36 @@ export function FileCard({
               required
               value={draftName}
             />
-            <select
-              className="neo-input"
-              disabled={isSubmitting}
-              onChange={(event) => setDraftFolderId(event.target.value)}
-              value={draftFolderId}
-            >
-              {folderOptions.map((option) => (
-                <option key={option.id ?? 'root'} value={option.id ?? ''}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            {canMove ? (
+              <select
+                className="neo-input"
+                disabled={isSubmitting}
+                onChange={(event) => setDraftFolderId(event.target.value)}
+                value={draftFolderId}
+              >
+                {folderOptions.map((option) => (
+                  <option key={option.id ?? 'root'} value={option.id ?? ''}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            {canChangeVisibility ? (
+              <label className="neo-card flex items-center gap-3 bg-white p-4">
+                <input
+                  checked={draftVisibility === 'public'}
+                  className="h-5 w-5 accent-black"
+                  disabled={isSubmitting}
+                  onChange={(event) =>
+                    setDraftVisibility(event.target.checked ? 'public' : 'private')
+                  }
+                  type="checkbox"
+                />
+                <span className="text-sm font-bold text-ink">
+                  Public view for every authenticated user
+                </span>
+              </label>
+            ) : null}
             <div className="flex flex-wrap gap-3">
               <Button disabled={isSubmitting} type="submit" variant="primary">
                 {isSubmitting ? 'Saving...' : 'Save'}
@@ -164,6 +213,7 @@ export function FileCard({
                 onClick={() => {
                   setDraftName(file.name);
                   setDraftFolderId(file.folderId ?? '');
+                  setDraftVisibility(file.visibility);
                   setIsEditing(false);
                 }}
                 type="button"
@@ -179,20 +229,29 @@ export function FileCard({
           <Button disabled={isSubmitting} onClick={() => void handleOpen()} variant="mint">
             Preview
           </Button>
-          <Button
-            disabled={isSubmitting}
-            onClick={() => setIsEditing((current) => !current)}
-            variant="secondary"
-          >
-            {isEditing ? 'Hide Edit' : 'Rename Or Move'}
-          </Button>
-          <Button
-            disabled={isSubmitting}
-            onClick={() => setIsDeleteModalOpen(true)}
-            variant="ink"
-          >
-            Delete
-          </Button>
+          {canRename ? (
+            <Button
+              disabled={isSubmitting}
+              onClick={() => setIsEditing((current) => !current)}
+              variant="secondary"
+            >
+              {isEditing ? 'Hide Edit' : canMove ? 'Rename Or Move' : 'Rename'}
+            </Button>
+          ) : null}
+          {canShare ? (
+            <Button disabled={isSubmitting} onClick={() => onShare?.(file)} variant="primary">
+              Share
+            </Button>
+          ) : null}
+          {canDelete ? (
+            <Button
+              disabled={isSubmitting}
+              onClick={() => setIsDeleteModalOpen(true)}
+              variant="ink"
+            >
+              Delete
+            </Button>
+          ) : null}
         </div>
       </div>
 

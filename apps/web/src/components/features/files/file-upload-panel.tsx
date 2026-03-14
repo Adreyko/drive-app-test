@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 type FileUploadPanelProps = Readonly<{
   currentFolderName: string | null;
   errorMessage: string | null;
+  isPublicView: boolean;
   isUploading: boolean;
   onChange: (file: globalThis.File | null) => void;
+  onTogglePublicView: (isPublic: boolean) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   selectedFile: globalThis.File | null;
 }>;
@@ -15,8 +17,10 @@ type FileUploadPanelProps = Readonly<{
 export function FileUploadPanel({
   currentFolderName,
   errorMessage,
+  isPublicView,
   isUploading,
   onChange,
+  onTogglePublicView,
   onSubmit,
   selectedFile,
 }: FileUploadPanelProps) {
@@ -68,6 +72,19 @@ export function FileUploadPanel({
             <p className="mt-2 text-sm font-bold text-ink">{selectedFile.name}</p>
           </div>
         ) : null}
+
+        <label className="neo-card flex items-center gap-3 bg-white p-4">
+          <input
+            checked={isPublicView}
+            className="h-5 w-5 accent-black"
+            disabled={isUploading}
+            onChange={(event) => onTogglePublicView(event.target.checked)}
+            type="checkbox"
+          />
+          <span className="text-sm font-bold text-ink">
+            Public view: every authenticated user can see and preview this file.
+          </span>
+        </label>
 
         {errorMessage ? (
           <div className="neo-card bg-blush p-4 text-sm font-bold text-ink">

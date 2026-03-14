@@ -27,7 +27,7 @@ export function useUploadFileMutation() {
   const queryClient = useQueryClient();
 
   return useMutation<FileItem, Error, UploadFileInput>({
-    mutationFn: async ({ file, folderId }) => {
+    mutationFn: async ({ file, folderId, visibility }) => {
       const mimeType = file.type || 'application/octet-stream';
       const upload = await FilesApi.requestUploadUrl({
         name: file.name,
@@ -44,6 +44,7 @@ export function useUploadFileMutation() {
         size: file.size,
         mimeType,
         folderId,
+        visibility,
       });
     },
     onSuccess: async () => {

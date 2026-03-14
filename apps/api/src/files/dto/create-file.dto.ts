@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -7,6 +8,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { FileVisibility } from '../enums/file-visibility.enum';
 
 export class CreateFileDto {
   @Transform(({ value }) => trimString(value))
@@ -28,6 +30,10 @@ export class CreateFileDto {
   @IsInt()
   @Min(0)
   size!: number;
+
+  @IsOptional()
+  @IsEnum(FileVisibility)
+  visibility?: FileVisibility;
 
   @IsOptional()
   @IsUUID('4')

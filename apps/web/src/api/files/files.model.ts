@@ -1,11 +1,18 @@
+export type FileAccessRole = 'owner' | 'editor' | 'viewer';
+export type FileVisibility = 'private' | 'public';
+
 export type FileItem = {
   id: string;
   name: string;
   s3Key: string;
   size: number;
   mimeType: string;
+  visibility: FileVisibility;
   folderId: string | null;
   ownerId: string;
+  ownerEmail: string;
+  accessRole: FileAccessRole;
+  isOwned: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -31,6 +38,7 @@ export type CreateFileInput = {
   s3Key: string;
   size: number;
   mimeType: string;
+  visibility?: FileVisibility;
   folderId?: string | null;
 };
 
@@ -38,6 +46,7 @@ export type UpdateFileInput = {
   id: string;
   name?: string;
   folderId?: string | null;
+  visibility?: FileVisibility;
 };
 
 export type DownloadUrlResponse = {
@@ -48,4 +57,5 @@ export type DownloadUrlResponse = {
 export type UploadFileInput = {
   file: globalThis.File;
   folderId?: string | null;
+  visibility?: FileVisibility;
 };

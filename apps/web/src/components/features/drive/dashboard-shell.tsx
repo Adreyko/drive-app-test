@@ -13,7 +13,9 @@ import { clearAuthToken } from '@/lib/auth/token-storage';
 const workspaceRules = [
   'Create nested folders from any current location',
   'Upload directly to S3 with a presigned URL',
-  'Rename, move, open, and delete files from the dashboard',
+  'Mark owned files public for every authenticated user',
+  'Share files by email with viewer or editor roles',
+  'See owned files plus incoming shared/public files in one dashboard',
 ];
 
 export function DashboardShell() {
@@ -85,16 +87,16 @@ export function DashboardShell() {
       <section className="neo-card bg-mint p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-4">
-            <span className="neo-badge bg-white">Phase 5 / File Management</span>
+            <span className="neo-badge bg-white">Phase 6 / Sharing + Permissions</span>
             <div>
               <h1 className="font-display text-4xl uppercase leading-none md:text-6xl">
                 Build Your Storage Grid.
               </h1>
               <p className="mt-4 max-w-2xl text-lg font-bold text-ink">
                 You are authenticated as <span className="underline">{user.email}</span>.
-                This phase adds file rename, move, open, and delete actions on
-                top of direct S3 uploads, metadata records, and the nested
-                folder browser.
+                This phase adds file sharing by email, viewer and editor roles,
+                and a combined dashboard view for files you own and files other
+                users shared with you.
               </p>
             </div>
           </div>

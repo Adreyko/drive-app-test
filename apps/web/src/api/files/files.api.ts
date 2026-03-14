@@ -70,6 +70,7 @@ export const FilesApi = {
         {
           name: input.name,
           folderId: input.folderId,
+          visibility: input.visibility,
         },
       );
 

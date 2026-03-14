@@ -1,11 +1,13 @@
 import { Transform } from 'class-transformer';
 import {
+  IsEnum,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { FileVisibility } from '../enums/file-visibility.enum';
 
 export class UpdateFileDto {
   @IsOptional()
@@ -19,6 +21,10 @@ export class UpdateFileDto {
   @Transform(({ value }) => normalizeFolderId(value))
   @IsUUID('4')
   folderId?: string | null;
+
+  @IsOptional()
+  @IsEnum(FileVisibility)
+  visibility?: FileVisibility;
 }
 
 function trimString(value: unknown): unknown {

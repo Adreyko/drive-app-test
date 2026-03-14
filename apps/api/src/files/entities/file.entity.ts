@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { Folder } from '../../folders/entities/folder.entity';
 import { User } from '../../users/entities/user.entity';
+import { FileVisibility } from '../enums/file-visibility.enum';
 
 const bigintTransformer: ValueTransformer = {
   to: (value: number) => value,
@@ -40,6 +41,13 @@ export class File {
 
   @Column({ type: 'varchar', length: 255 })
   mimeType!: string;
+
+  @Column({
+    type: 'enum',
+    enum: FileVisibility,
+    default: FileVisibility.PRIVATE,
+  })
+  visibility!: FileVisibility;
 
   @Column({ type: 'uuid', nullable: true })
   folderId!: string | null;
