@@ -1,41 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import type { FileItem, UpdateFileInput } from '@/api/files/files.model';
+import { fileCardCopy } from '@/shared/features/files/constants/file-ui-copy';
+import { useFileCard } from '@/shared/features/files/hooks/use-file-card';
+import {
+  getFileAccessLabel,
+  getFileLocationLabel,
+  getFileVisibilityLabel,
+} from '@/shared/features/files/utils/file-card-meta';
+import type { FolderSelectOption } from '@/shared/features/folders/utils/folder-tree';
+import { formatBytes } from '@/shared/utils/format-bytes';
 import { Button } from '@/components/ui/button';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { Input } from '@/components/ui/input';
 
-export type FileFolderOption = {
-  id: string | null;
-  label: string;
-};
-
 type FileCardProps = Readonly<{
   file: FileItem;
-  folderOptions: FileFolderOption[];
+  folderOptions: FolderSelectOption[];
   onDelete: (file: FileItem) => Promise<void>;
   onOpen: (file: FileItem) => Promise<void>;
   onShare?: (file: FileItem) => void;
   onUpdate: (file: FileItem, input: UpdateFileInput) => Promise<boolean>;
 }>;
-
-function formatBytes(value: number): string {
-  if (value < 1024) {
-    return `${value} B`;
-  }
-
-  const units = ['KB', 'MB', 'GB', 'TB'];
-  let size = value / 1024;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex += 1;
-  }
-
-  return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[unitIndex]}`;
-}
 
 export function FileCard({
   file,
@@ -45,76 +31,37 @@ export function FileCard({
   onShare,
   onUpdate,
 }: FileCardProps) {
-  const [draftName, setDraftName] = useState(file.name);
-  const [draftFolderId, setDraftFolderId] = useState(file.folderId ?? '');
-  const [draftVisibility, setDraftVisibility] = useState(file.visibility);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const canRename = file.accessRole !== 'viewer';
-  const canMove = file.isOwned;
-  const canDelete = file.isOwned;
-  const canChangeVisibility = file.isOwned;
+  const {
+    canChangeVisibility,
+    canDelete,
+    canMove,
+    canRename,
+    cancelEditing,
+    closeDeleteModal,
+    draftFolderId,
+    draftName,
+    draftVisibility,
+    handleDelete,
+    handleOpen,
+    handleSave,
+    isDeleteModalOpen,
+    isEditing,
+    isSubmitting,
+    openDeleteModal,
+    setDraftFolderId,
+    setDraftName,
+    setDraftVisibility,
+    toggleEditing,
+  } = useFileCard({
+    file,
+    onDelete,
+    onOpen,
+    onUpdate,
+  });
   const canShare = file.isOwned && Boolean(onShare);
-  const locationLabel = file.isOwned
-    ? folderOptions.find((option) => option.id === file.folderId)?.label ??
-      'Root workspace'
-    : file.ownerEmail;
-  const accessLabel =
-    file.accessRole === 'owner'
-      ? 'Owner'
-      : file.accessRole === 'editor'
-        ? 'Editor'
-        : 'Viewer';
-  const visibilityLabel =
-    file.visibility === 'public' ? 'Public View' : 'Private';
-
-  useEffect(() => {
-    setDraftName(file.name);
-    setDraftFolderId(file.folderId ?? '');
-    setDraftVisibility(file.visibility);
-  }, [file.folderId, file.name, file.visibility]);
-
-  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const updated = await onUpdate(file, {
-        id: file.id,
-        name: draftName.trim(),
-        ...(canMove ? { folderId: draftFolderId || null } : {}),
-        ...(canChangeVisibility ? { visibility: draftVisibility } : {}),
-      });
-
-      if (updated) {
-        setIsEditing(false);
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleOpen() {
-    setIsSubmitting(true);
-
-    try {
-      await onOpen(file);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleDelete() {
-    setIsSubmitting(true);
-
-    try {
-      await onDelete(file);
-      setIsDeleteModalOpen(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  const locationLabel = getFileLocationLabel(file, folderOptions);
+  const accessLabel = getFileAccessLabel(file);
+  const visibilityLabel = getFileVisibilityLabel(file);
 
   return (
     <article className="neo-card bg-sky p-5">
@@ -134,31 +81,33 @@ export function FileCard({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <div className="neo-card bg-white p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
-              Size
+              {fileCardCopy.sizeLabel}
             </p>
-            <p className="mt-2 text-sm font-bold text-ink">{formatBytes(file.size)}</p>
+            <p className="mt-2 text-sm font-bold text-ink">
+              {formatBytes(file.size)}
+            </p>
           </div>
           <div className="neo-card bg-lemon p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
-              {file.isOwned ? 'Location' : 'Owner'}
+              {file.isOwned ? fileCardCopy.locationLabel : fileCardCopy.ownerLabel}
             </p>
             <p className="mt-2 text-sm font-bold text-ink">{locationLabel}</p>
           </div>
           <div className="neo-card bg-mint p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
-              Access
+              {fileCardCopy.accessLabel}
             </p>
             <p className="mt-2 text-sm font-bold text-ink">{accessLabel}</p>
           </div>
           <div className="neo-card bg-white p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
-              Visibility
+              {fileCardCopy.visibilityLabel}
             </p>
             <p className="mt-2 text-sm font-bold text-ink">{visibilityLabel}</p>
           </div>
           <div className="neo-card bg-white p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
-              Updated
+              {fileCardCopy.updatedLabel}
             </p>
             <p className="mt-2 text-sm font-bold text-ink">
               {new Date(file.updatedAt).toLocaleDateString()}
@@ -195,61 +144,72 @@ export function FileCard({
                   className="h-5 w-5 accent-black"
                   disabled={isSubmitting}
                   onChange={(event) =>
-                    setDraftVisibility(event.target.checked ? 'public' : 'private')
+                    setDraftVisibility(
+                      event.target.checked ? 'public' : 'private',
+                    )
                   }
                   type="checkbox"
                 />
                 <span className="text-sm font-bold text-ink">
-                  Public view for every authenticated user
+                  {fileCardCopy.publicViewToggleLabel}
                 </span>
               </label>
             ) : null}
             <div className="flex flex-wrap gap-3">
               <Button disabled={isSubmitting} type="submit" variant="primary">
-                {isSubmitting ? 'Saving...' : 'Save'}
+                {isSubmitting
+                  ? fileCardCopy.saveButtonPending
+                  : fileCardCopy.saveButtonIdle}
               </Button>
               <Button
                 disabled={isSubmitting}
-                onClick={() => {
-                  setDraftName(file.name);
-                  setDraftFolderId(file.folderId ?? '');
-                  setDraftVisibility(file.visibility);
-                  setIsEditing(false);
-                }}
+                onClick={cancelEditing}
                 type="button"
                 variant="secondary"
               >
-                Cancel
+                {fileCardCopy.cancelButtonLabel}
               </Button>
             </div>
           </form>
         ) : null}
 
         <div className="flex flex-wrap gap-3">
-          <Button disabled={isSubmitting} onClick={() => void handleOpen()} variant="mint">
-            Preview
+          <Button
+            disabled={isSubmitting}
+            onClick={() => void handleOpen()}
+            variant="mint"
+          >
+            {fileCardCopy.previewButtonLabel}
           </Button>
           {canRename ? (
             <Button
               disabled={isSubmitting}
-              onClick={() => setIsEditing((current) => !current)}
+              onClick={toggleEditing}
               variant="secondary"
             >
-              {isEditing ? 'Hide Edit' : canMove ? 'Rename Or Move' : 'Rename'}
+              {isEditing
+                ? 'Hide Edit'
+                : canMove
+                  ? fileCardCopy.renameOrMoveButtonLabel
+                  : fileCardCopy.renameButtonLabel}
             </Button>
           ) : null}
           {canShare ? (
-            <Button disabled={isSubmitting} onClick={() => onShare?.(file)} variant="primary">
-              Share
+            <Button
+              disabled={isSubmitting}
+              onClick={() => onShare?.(file)}
+              variant="primary"
+            >
+              {fileCardCopy.shareButtonLabel}
             </Button>
           ) : null}
           {canDelete ? (
             <Button
               disabled={isSubmitting}
-              onClick={() => setIsDeleteModalOpen(true)}
+              onClick={openDeleteModal}
               variant="ink"
             >
-              Delete
+              {fileCardCopy.deleteButtonLabel}
             </Button>
           ) : null}
         </div>
@@ -257,12 +217,12 @@ export function FileCard({
 
       {isDeleteModalOpen ? (
         <ConfirmationModal
-          confirmLabel="Delete File"
+          confirmLabel={fileCardCopy.deleteConfirmLabel}
           description={`Delete "${file.name}" from storage and remove its metadata record.`}
           isLoading={isSubmitting}
-          onClose={() => setIsDeleteModalOpen(false)}
+          onClose={closeDeleteModal}
           onConfirm={handleDelete}
-          title="Delete File?"
+          title={fileCardCopy.deleteTitle}
         />
       ) : null}
     </article>

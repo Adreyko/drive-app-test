@@ -1,10 +1,12 @@
 import type { FileItem, UpdateFileInput } from '@/api/files/files.model';
-import { FileCard, type FileFolderOption } from './file-card';
+import { ownedFilesCopy } from '@/shared/features/files/constants/file-ui-copy';
+import type { FolderSelectOption } from '@/shared/features/folders/utils/folder-tree';
+import { FileCard } from './file-card';
 
 type FileListProps = Readonly<{
   currentFolderName: string | null;
   files: FileItem[];
-  folderOptions: FileFolderOption[];
+  folderOptions: FolderSelectOption[];
   onDelete: (file: FileItem) => Promise<void>;
   onOpen: (file: FileItem) => Promise<void>;
   onShare: (file: FileItem) => void;
@@ -25,10 +27,10 @@ export function FileList({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-            Owned files
+            {ownedFilesCopy.sectionEyebrow}
           </p>
           <h2 className="mt-2 font-display text-3xl uppercase leading-none text-ink">
-            {currentFolderName ?? 'Root'} Files
+            {currentFolderName ?? 'Root'} {ownedFilesCopy.filesSuffix}
           </h2>
         </div>
         <div className="neo-badge bg-lemon">{files.length} files</div>
@@ -37,10 +39,10 @@ export function FileList({
       {files.length === 0 ? (
         <div className="mt-6 neo-card bg-sky p-8">
           <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-            Empty state
+            {ownedFilesCopy.emptyEyebrow}
           </p>
           <p className="mt-3 text-base font-bold text-ink">
-            Upload the first file into this location to populate the list.
+            {ownedFilesCopy.emptyDescription}
           </p>
         </div>
       ) : (

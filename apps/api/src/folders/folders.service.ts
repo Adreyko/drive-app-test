@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateFolderDto } from './dto/update-folder.dto';
 import { Folder } from './entities/folder.entity';
@@ -10,6 +11,7 @@ export class FoldersService {
   constructor(
     @InjectRepository(Folder)
     private readonly foldersRepository: Repository<Folder>,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async create(ownerId: string, createFolderDto: CreateFolderDto): Promise<Folder> {
@@ -25,7 +27,11 @@ export class FoldersService {
       parentId,
     });
 
-    return this.foldersRepository.save(folder);
+    const savedFolder = await this.foldersRepository.save(folder);
+
+    this.realtimeService.emitFilesUpdatedToUsers([ownerId]);
+
+    return savedFolder;
   }
 
   findAllForOwner(ownerId: string): Promise<Folder[]> {
@@ -44,7 +50,11 @@ export class FoldersService {
 
     folder.name = updateFolderDto.name;
 
-    return this.foldersRepository.save(folder);
+    const savedFolder = await this.foldersRepository.save(folder);
+
+    this.realtimeService.emitFilesUpdatedToUsers([ownerId]);
+
+    return savedFolder;
   }
 
   async remove(ownerId: string, folderId: string): Promise<void> {
@@ -54,6 +64,8 @@ export class FoldersService {
       id: folderId,
       ownerId,
     });
+
+    this.realtimeService.emitFilesUpdatedToUsers([ownerId]);
   }
 
   private async getOwnedFolderOrFail(

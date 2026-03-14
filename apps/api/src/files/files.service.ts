@@ -9,6 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 import { Folder } from '../folders/entities/folder.entity';
+import { RealtimeService } from '../realtime/realtime.service';
 import { UsersService } from '../users/users.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
@@ -39,6 +40,7 @@ export class FilesService {
     private readonly fileAccessRepository: Repository<FileAccess>,
     @InjectRepository(Folder)
     private readonly foldersRepository: Repository<Folder>,
+    private readonly realtimeService: RealtimeService,
     private readonly s3StorageService: S3StorageService,
     private readonly usersService: UsersService,
   ) {}
@@ -182,6 +184,11 @@ export class FilesService {
 
     await this.filesRepository.save(file);
 
+    await this.notifyFileChange(file, {
+      affectedUserIds:
+        file.visibility === FileVisibility.PRIVATE ? [ownerId] : undefined,
+    });
+
     return this.buildOwnedFileItem(ownerId, file.id);
   }
 
@@ -191,6 +198,7 @@ export class FilesService {
     updateFileDto: UpdateFileDto,
   ): Promise<FileListItem> {
     const { file, accessRole } = await this.getAccessibleFileOrFail(userId, fileId);
+    const previousVisibility = file.visibility;
     const hasNameUpdate = updateFileDto.name !== undefined;
     const hasFolderUpdate = updateFileDto.folderId !== undefined;
     const hasVisibilityUpdate = updateFileDto.visibility !== undefined;
@@ -223,12 +231,16 @@ export class FilesService {
     }
 
     await this.filesRepository.save(file);
+    await this.notifyFileChange(file, {
+      previousVisibility,
+    });
 
     return this.buildAccessibleFileItem(userId, file.id);
   }
 
   async remove(userId: string, fileId: string): Promise<void> {
     const { file, accessRole } = await this.getAccessibleFileOrFail(userId, fileId);
+    const sharedUserIds = await this.getSharedUserIds(file.id);
 
     this.assertIsOwner(accessRole);
 
@@ -236,6 +248,10 @@ export class FilesService {
     await this.filesRepository.delete({
       id: file.id,
       ownerId: file.ownerId,
+    });
+
+    await this.notifyFileChange(file, {
+      sharedUserIds,
     });
   }
 
@@ -289,6 +305,10 @@ export class FilesService {
     access.role = shareFileDto.role;
 
     const savedAccess = await this.fileAccessRepository.save(access);
+
+    await this.notifyFileChange(file, {
+      affectedUserIds: [file.ownerId, recipient.id],
+    });
 
     return {
       fileId: file.id,
@@ -400,6 +420,48 @@ export class FilesService {
     const { file, accessRole } = await this.getAccessibleFileOrFail(userId, fileId);
 
     return toFileListItem(file, accessRole);
+  }
+
+  private async notifyFileChange(
+    file: Pick<File, 'id' | 'ownerId' | 'visibility'>,
+    options: {
+      affectedUserIds?: string[];
+      previousVisibility?: FileVisibility;
+      sharedUserIds?: string[];
+    } = {},
+  ): Promise<void> {
+    if (options.affectedUserIds) {
+      this.realtimeService.emitFilesUpdatedToUsers(options.affectedUserIds);
+      return;
+    }
+
+    if (
+      options.previousVisibility === FileVisibility.PUBLIC ||
+      file.visibility === FileVisibility.PUBLIC
+    ) {
+      this.realtimeService.emitFilesUpdatedToAllAuthenticatedUsers();
+      return;
+    }
+
+    const sharedUserIds = options.sharedUserIds ?? (await this.getSharedUserIds(file.id));
+
+    this.realtimeService.emitFilesUpdatedToUsers([
+      file.ownerId,
+      ...sharedUserIds,
+    ]);
+  }
+
+  private async getSharedUserIds(fileId: string): Promise<string[]> {
+    const accesses = await this.fileAccessRepository.find({
+      where: {
+        fileId,
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    return accesses.map((access) => access.userId);
   }
 
   private assertIsOwner(accessRole: ResolvedFileAccessRole): void {

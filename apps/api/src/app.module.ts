@@ -6,6 +6,7 @@ import { envValidationSchema } from './config/env.validation';
 import { FilesModule } from './files/files.module';
 import { FoldersModule } from './folders/folders.module';
 import { HealthModule } from './health/health.module';
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { HealthModule } from './health/health.module';
     FilesModule,
     FoldersModule,
     HealthModule,
+    RealtimeModule,
   ],
 })
 export class AppModule {}

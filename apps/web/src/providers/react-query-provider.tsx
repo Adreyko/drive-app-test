@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import { RealtimeProvider } from './realtime-provider';
 
 type ReactQueryProviderProps = Readonly<{
   children: React.ReactNode;
@@ -23,6 +24,8 @@ export function ReactQueryProvider({
   );
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <RealtimeProvider>{children}</RealtimeProvider>
+    </QueryClientProvider>
   );
 }

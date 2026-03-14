@@ -1,6 +1,7 @@
 'use client';
 
 import { useId } from 'react';
+import { fileUploadCopy } from '@/shared/features/files/constants/file-ui-copy';
 import { Button } from '@/components/ui/button';
 
 type FileUploadPanelProps = Readonly<{
@@ -34,25 +35,24 @@ export function FileUploadPanel({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-            Upload file
+            {fileUploadCopy.uploadEyebrow}
           </p>
           <h2 className="mt-2 font-display text-3xl uppercase leading-none text-ink">
             Send To {currentFolderName ?? 'Root'}
           </h2>
           <p className="mt-3 max-w-xl text-sm font-bold text-ink/80">
-            The browser uploads directly to S3 with a presigned `PUT` URL, then
-            saves metadata in PostgreSQL.
+            {fileUploadCopy.uploadDescription}
           </p>
         </div>
         <div className="neo-badge bg-white">
-          {selectedFile ? '1 file ready' : 'No file selected'}
+          {selectedFile ? '1 file ready' : fileUploadCopy.noFileSelectedBadge}
         </div>
       </div>
 
       <form className="mt-6 space-y-4" onSubmit={onSubmit}>
         <div className="space-y-2">
           <label className="text-xs font-black uppercase tracking-[0.16em]" htmlFor={inputId}>
-            Choose file
+            {fileUploadCopy.chooseFileLabel}
           </label>
           <input
             className="neo-input file:mr-4 file:rounded-xl file:border-0 file:bg-lemon file:px-4 file:py-2 file:text-sm file:font-black file:uppercase"
@@ -67,7 +67,7 @@ export function FileUploadPanel({
         {selectedFile ? (
           <div className="neo-card bg-white p-4">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-ink">
-              Selected
+              {fileUploadCopy.selectedEyebrow}
             </p>
             <p className="mt-2 text-sm font-bold text-ink">{selectedFile.name}</p>
           </div>
@@ -82,7 +82,7 @@ export function FileUploadPanel({
             type="checkbox"
           />
           <span className="text-sm font-bold text-ink">
-            Public view: every authenticated user can see and preview this file.
+            {fileUploadCopy.publicViewLabel}
           </span>
         </label>
 
@@ -93,7 +93,9 @@ export function FileUploadPanel({
         ) : null}
 
         <Button disabled={isUploading || !selectedFile} type="submit" variant="primary">
-          {isUploading ? 'Uploading...' : 'Upload File'}
+          {isUploading
+            ? fileUploadCopy.uploadButtonPending
+            : fileUploadCopy.uploadButtonIdle}
         </Button>
       </form>
     </article>

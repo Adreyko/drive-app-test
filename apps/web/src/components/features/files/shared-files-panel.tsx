@@ -1,9 +1,11 @@
 import type { FileItem, UpdateFileInput } from '@/api/files/files.model';
-import { FileCard, type FileFolderOption } from './file-card';
+import { sharedFilesCopy } from '@/shared/features/files/constants/file-ui-copy';
+import type { FolderSelectOption } from '@/shared/features/folders/utils/folder-tree';
+import { FileCard } from './file-card';
 
 type SharedFilesPanelProps = Readonly<{
   files: FileItem[];
-  folderOptions: FileFolderOption[];
+  folderOptions: FolderSelectOption[];
   onDelete: (file: FileItem) => Promise<void>;
   onOpen: (file: FileItem) => Promise<void>;
   onUpdate: (file: FileItem, input: UpdateFileInput) => Promise<boolean>;
@@ -21,15 +23,13 @@ export function SharedFilesPanel({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-            Shared or public
+            {sharedFilesCopy.sectionEyebrow}
           </p>
           <h2 className="mt-2 font-display text-3xl uppercase leading-none text-ink">
-            Incoming Files
+            {sharedFilesCopy.sectionTitle}
           </h2>
           <p className="mt-3 max-w-2xl text-sm font-bold text-ink/80">
-            Shared files and public files from other users are listed here outside
-            your folder tree. Editors can rename explicit shares, while public
-            files stay viewer-only.
+            {sharedFilesCopy.sectionDescription}
           </p>
         </div>
         <div className="neo-badge bg-mint">{files.length} incoming files</div>
@@ -38,10 +38,10 @@ export function SharedFilesPanel({
       {files.length === 0 ? (
         <div className="mt-6 neo-card bg-sky p-8">
           <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-            Empty state
+            {sharedFilesCopy.emptyEyebrow}
           </p>
           <p className="mt-3 text-base font-bold text-ink">
-            Files other users share with you, or mark as public, will appear here.
+            {sharedFilesCopy.emptyDescription}
           </p>
         </div>
       ) : (
