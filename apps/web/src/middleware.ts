@@ -8,6 +8,10 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get(AUTH_TOKEN_COOKIE_NAME)?.value;
   const { pathname, search } = request.nextUrl;
 
+  if (pathname === '/' && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
   if (pathname.startsWith('/dashboard') && !token) {
     const loginUrl = new URL('/login', request.url);
 
@@ -24,5 +28,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/register'],
+  matcher: ['/', '/dashboard/:path*', '/login', '/register'],
 };

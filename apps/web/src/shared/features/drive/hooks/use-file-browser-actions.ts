@@ -53,19 +53,16 @@ export function useFileBrowserActions({
   const downloadFileUrlMutation = useDownloadFileUrlMutation();
   const shareFileMutation = useShareFileMutation();
 
-  async function uploadFile(
-    event: React.FormEvent<HTMLFormElement>,
-  ): Promise<void> {
-    event.preventDefault();
-
+  async function uploadFile(): Promise<boolean> {
     if (!selectedFile) {
       showError('Select a file before uploading.');
-      return;
+      return false;
     }
 
     resetFeedback();
 
     try {
+      const uploadedFileName = selectedFile.name;
       await uploadFileMutation.mutateAsync({
         file: selectedFile,
         folderId: currentFolderId,
@@ -73,8 +70,11 @@ export function useFileBrowserActions({
       });
       setSelectedFile(null);
       setIsUploadPublicView(false);
+      showNotice(`Uploaded "${uploadedFileName}".`);
+      return true;
     } catch (error) {
       showError(getApiErrorMessage(error, 'Could not upload file.'));
+      return false;
     }
   }
 

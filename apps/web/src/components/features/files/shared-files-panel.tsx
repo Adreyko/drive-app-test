@@ -1,5 +1,5 @@
 import type { FileItem, UpdateFileInput } from '@/api/files/files.model';
-import { sharedFilesCopy } from '@/shared/features/files/constants/file-ui-copy';
+import { StatePanel } from '@/components/ui/state-panel';
 import type { FolderSelectOption } from '@/shared/features/folders/utils/folder-tree';
 import { FileCard } from './file-card';
 
@@ -19,33 +19,24 @@ export function SharedFilesPanel({
   onUpdate,
 }: SharedFilesPanelProps) {
   return (
-    <article className="neo-card bg-white p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <article className="neo-card bg-white p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-            {sharedFilesCopy.sectionEyebrow}
+          <p className="text-xs font-semibold tracking-[0.08em] text-ink">
+            Incoming
           </p>
-          <h2 className="mt-2 font-display text-3xl uppercase leading-none text-ink">
-            {sharedFilesCopy.sectionTitle}
+          <h2 className="mt-1 font-display text-xl leading-tight text-ink md:text-2xl">
+            Shared files
           </h2>
-          <p className="mt-3 max-w-2xl text-sm font-bold text-ink/80">
-            {sharedFilesCopy.sectionDescription}
+          <p className="mt-2 max-w-2xl text-sm font-medium text-ink/80">
+            Shared files and public files from other users are listed here.
           </p>
         </div>
-        <div className="neo-badge bg-mint">{files.length} incoming files</div>
+        <div className="neo-badge bg-mint">{files.length} files</div>
       </div>
 
-      {files.length === 0 ? (
-        <div className="mt-6 neo-card bg-sky p-8">
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-            {sharedFilesCopy.emptyEyebrow}
-          </p>
-          <p className="mt-3 text-base font-bold text-ink">
-            {sharedFilesCopy.emptyDescription}
-          </p>
-        </div>
-      ) : (
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
+      {files.length === 0 ? null : (
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
           {files.map((file) => (
             <FileCard
               file={file}
@@ -58,6 +49,16 @@ export function SharedFilesPanel({
           ))}
         </div>
       )}
+      {files.length === 0 ? (
+        <StatePanel
+          badge="Share"
+          className="mt-4"
+          description="Files shared with you will appear here."
+          eyebrow="Empty state"
+          title="No incoming files yet"
+          tone="sky"
+        />
+      ) : null}
     </article>
   );
 }

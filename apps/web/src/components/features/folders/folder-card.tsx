@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FolderItem } from '@/api/folders/folders.model';
+import { truncateLongWords } from '@/shared/utils/truncate-long-words';
+import { ActionMenu } from '@/components/ui/action-menu';
 import { Button } from '@/components/ui/button';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
-import { Input } from '@/components/ui/input';
+import { FolderFormModal } from './folder-form-modal';
 
 type FolderCardProps = Readonly<{
   childCount: number;
@@ -21,29 +23,10 @@ export function FolderCard({
   onOpen,
   onRename,
 }: FolderCardProps) {
-  const [draftName, setDraftName] = useState(folder.name);
-  const [isEditing, setIsEditing] = useState(false);
+  const folderLabel = truncateLongWords(folder.name);
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
-  useEffect(() => {
-    setDraftName(folder.name);
-  }, [folder.name]);
-
-  async function handleRenameSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const renamed = await onRename(folder, draftName);
-
-      if (renamed) {
-        setIsEditing(false);
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
 
   async function handleDelete() {
     setIsSubmitting(true);
@@ -56,87 +39,93 @@ export function FolderCard({
     }
   }
 
+  async function handleRename(name: string) {
+    setIsSubmitting(true);
+
+    try {
+      const renamed = await onRename(folder, name);
+
+      if (renamed) {
+        setIsRenameModalOpen(false);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
-    <article className="neo-card bg-white p-5">
+    <article className="neo-card bg-white p-4">
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-ink">
+            <p className="text-[11px] font-semibold tracking-[0.08em] text-ink">
               Folder
             </p>
-            <h3 className="mt-2 font-display text-2xl uppercase leading-none text-ink">
-              {folder.name}
+            <h3
+              className="mt-2 font-display text-xl leading-tight text-ink md:text-2xl"
+              title={folder.name}
+            >
+              {folderLabel}
             </h3>
           </div>
-          <div className="neo-badge bg-sky">{childCount} kids</div>
+          <div className="flex items-center gap-3">
+            <div className="neo-badge bg-sky">{childCount} items</div>
+            <ActionMenu
+              items={[
+                {
+                  disabled: isSubmitting,
+                  label: 'Rename Folder',
+                  onSelect: () => setIsRenameModalOpen(true),
+                },
+                {
+                  danger: true,
+                  disabled: isSubmitting,
+                  label: 'Delete Folder',
+                  onSelect: () => setIsDeleteModalOpen(true),
+                },
+              ]}
+            />
+          </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
           <div className="neo-card bg-lemon p-3">
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
+            <p className="text-[11px] font-semibold tracking-[0.08em] text-ink">
               Created
             </p>
-            <p className="mt-2 text-sm font-bold text-ink">
+            <p className="mt-2 text-sm font-medium text-ink">
               {new Date(folder.createdAt).toLocaleDateString()}
             </p>
           </div>
 
           <div className="neo-card bg-mint p-3">
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-ink">
-              Parent
+            <p className="text-[11px] font-semibold tracking-[0.08em] text-ink">
+              Location
             </p>
-            <p className="mt-2 text-sm font-bold text-ink">
+            <p className="mt-2 text-sm font-medium text-ink">
               {folder.parentId ? 'Nested' : 'Root'}
             </p>
           </div>
         </div>
 
-        {isEditing ? (
-          <form className="space-y-3" onSubmit={handleRenameSubmit}>
-            <Input
-              onChange={(event) => setDraftName(event.target.value)}
-              required
-              value={draftName}
-            />
-            <div className="flex flex-wrap gap-3">
-              <Button disabled={isSubmitting} type="submit" variant="primary">
-                {isSubmitting ? 'Saving...' : 'Save'}
-              </Button>
-              <Button
-                disabled={isSubmitting}
-                onClick={() => {
-                  setDraftName(folder.name);
-                  setIsEditing(false);
-                }}
-                type="button"
-                variant="secondary"
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        ) : null}
-
         <div className="flex flex-wrap gap-3">
           <Button disabled={isSubmitting} onClick={() => onOpen(folder.id)} variant="primary">
             Open
           </Button>
-          <Button
-            disabled={isSubmitting}
-            onClick={() => setIsEditing((current) => !current)}
-            variant="secondary"
-          >
-            {isEditing ? 'Hide Rename' : 'Rename'}
-          </Button>
-          <Button
-            disabled={isSubmitting}
-            onClick={() => setIsDeleteModalOpen(true)}
-            variant="ink"
-          >
-            Delete
-          </Button>
         </div>
       </div>
+
+      {isRenameModalOpen ? (
+        <FolderFormModal
+          description={`Rename ${folder.name}.`}
+          initialName={folder.name}
+          isSubmitting={isSubmitting}
+          onClose={() => setIsRenameModalOpen(false)}
+          onSubmit={handleRename}
+          submitLabel="Save Changes"
+          title="Rename Folder"
+        />
+      ) : null}
 
       {isDeleteModalOpen ? (
         <ConfirmationModal

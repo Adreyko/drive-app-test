@@ -14,10 +14,8 @@ type UseFolderBrowserActionsOptions = Readonly<{
   closeCurrentFolderDeleteModal: () => void;
   currentFolder: FolderItem | null;
   currentFolderId: string | null;
-  newFolderName: string;
   resetFeedback: () => void;
   setCurrentFolderId: (folderId: string | null) => void;
-  setNewFolderName: (value: string) => void;
   showError: (message: string) => void;
 }>;
 
@@ -25,10 +23,8 @@ export function useFolderBrowserActions({
   closeCurrentFolderDeleteModal,
   currentFolder,
   currentFolderId,
-  newFolderName,
   resetFeedback,
   setCurrentFolderId,
-  setNewFolderName,
   showError,
 }: UseFolderBrowserActionsOptions) {
   const queryClient = useQueryClient();
@@ -36,20 +32,18 @@ export function useFolderBrowserActions({
   const renameFolderMutation = useRenameFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
 
-  async function createFolder(
-    event: React.FormEvent<HTMLFormElement>,
-  ): Promise<void> {
-    event.preventDefault();
+  async function createFolder(name: string): Promise<boolean> {
     resetFeedback();
 
     try {
       await createFolderMutation.mutateAsync({
-        name: newFolderName.trim(),
+        name: name.trim(),
         parentId: currentFolderId,
       });
-      setNewFolderName('');
+      return true;
     } catch (error) {
       showError(getApiErrorMessage(error, 'Could not create folder.'));
+      return false;
     }
   }
 
@@ -73,12 +67,12 @@ export function useFolderBrowserActions({
     }
   }
 
-  async function renameCurrentFolder(nextName: string): Promise<void> {
+  async function renameCurrentFolder(nextName: string): Promise<boolean> {
     if (!currentFolder) {
-      return;
+      return false;
     }
 
-    await renameFolder(currentFolder, nextName);
+    return renameFolder(currentFolder, nextName);
   }
 
   async function deleteFolder(folder: FolderItem): Promise<void> {

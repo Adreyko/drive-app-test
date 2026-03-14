@@ -5,11 +5,11 @@ import type { FileItem } from '@/api/files/files.model';
 
 export function useDriveWorkspaceState() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [newFolderName, setNewFolderName] = useState('');
   const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(
     null,
   );
   const [isUploadPublicView, setIsUploadPublicView] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [isCurrentFolderDeleteModalOpen, setIsCurrentFolderDeleteModalOpen] =
@@ -30,10 +30,6 @@ export function useDriveWorkspaceState() {
 
   function showNotice(message: string): void {
     setActionNotice(message);
-    setActionError(null);
-  }
-
-  function clearError(): void {
     setActionError(null);
   }
 
@@ -63,18 +59,23 @@ export function useDriveWorkspaceState() {
     setShareFile(null);
   }
 
+  function openUploadModal(): void {
+    setIsUploadModalOpen(true);
+  }
+
+  function closeUploadModal(): void {
+    setIsUploadModalOpen(false);
+    setSelectedFile(null);
+    setIsUploadPublicView(false);
+  }
+
   return {
     feedback: {
       actionError,
       actionNotice,
-      clearError,
       resetFeedback,
       showError,
       showNotice,
-    },
-    folderCreation: {
-      newFolderName,
-      setNewFolderName,
     },
     location: {
       currentFolderId,
@@ -93,7 +94,10 @@ export function useDriveWorkspaceState() {
       shareFile,
     },
     upload: {
+      closeUploadModal,
       isUploadPublicView,
+      isUploadModalOpen,
+      openUploadModal,
       selectedFile,
       setIsUploadPublicView,
       setSelectedFile,

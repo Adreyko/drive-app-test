@@ -4,30 +4,92 @@
 
 :root {
   color-scheme: light;
+  --neo-panel-glow: rgba(255, 255, 255, 0.58);
+}
+
+html {
+  min-height: 100%;
 }
 
 body {
   @apply bg-cream font-body text-ink;
   min-height: 100vh;
   background-image:
-    radial-gradient(circle at top left, rgba(255, 222, 89, 0.65), transparent 28%),
-    linear-gradient(135deg, #fff9df 0%, #ffd7e2 45%, #85d5ff 100%);
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.94), transparent 34%),
+    radial-gradient(circle at 86% 10%, rgba(191, 220, 241, 0.42), transparent 24%),
+    linear-gradient(180deg, #fffaf4 0%, #fcf7ef 100%);
+  background-attachment: fixed;
+  line-height: 1.45;
+}
+
+::selection {
+  background: #101010;
+  color: #fff9df;
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @layer components {
   .neo-card {
-    @apply rounded-[1.75rem] border-4 border-black shadow-neo;
+    @apply rounded-[22px_18px_24px_16px] border-2 border-black shadow-neo;
+    position: relative;
+    overflow: visible;
+    animation: panel-enter 180ms ease-out both;
+  }
+
+  .neo-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .neo-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, var(--neo-panel-glow), transparent 28%);
+    opacity: 0.35;
+    pointer-events: none;
   }
 
   .neo-badge {
-    @apply inline-flex items-center rounded-full border-4 border-black px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-ink shadow-neoSm;
+    @apply inline-flex items-center rounded-full border-2 border-black px-3 py-1.5 text-[11px] font-semibold tracking-[0.08em] text-ink shadow-neoSm;
+    backdrop-filter: blur(2px);
   }
 
   .neo-button {
-    @apply inline-flex items-center justify-center rounded-2xl border-4 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-ink shadow-neoSm transition-transform duration-150 hover:-translate-y-1 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center rounded-[18px] border-2 border-black px-4 py-2.5 text-sm font-semibold tracking-[0.04em] text-ink shadow-neoSm transition-transform duration-150 hover:-translate-y-0.5 focus-visible:-translate-y-0.5 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .neo-input {
-    @apply w-full rounded-2xl border-4 border-black bg-white px-4 py-3 text-base font-bold text-ink shadow-neoSm outline-none transition-transform duration-150 placeholder:text-black/45 focus:-translate-y-1 focus:shadow-neo;
+    @apply w-full rounded-[18px] border-2 border-black bg-white px-4 py-3 text-base font-medium text-ink shadow-neoSm outline-none transition-transform duration-150 placeholder:text-black/45 focus:-translate-y-0.5 focus:shadow-neo;
+    background-image: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.96),
+      rgba(255, 255, 255, 0.82)
+    );
+  }
+
+  .neo-modal-backdrop {
+    @apply bg-black/35 backdrop-blur-[2px];
+  }
+
+  .neo-modal-shell {
+    @apply neo-card bg-cream;
+    box-shadow: 8px 8px 0 0 rgba(31, 27, 24, 0.9);
+  }
+
+  .neo-state-panel {
+    @apply neo-card;
   }
 }

@@ -1,22 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import {
-  currentFolderPanelCopy,
-  folderBrowserCopy,
-} from '@/shared/features/folders/constants/folder-ui-copy';
+import { useState } from 'react';
 import type { FolderPathItem } from '@/shared/features/folders/utils/folder-tree';
+import { ActionMenu } from '@/components/ui/action-menu';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { FolderBreadcrumbs } from './folder-breadcrumbs';
+import { FolderFormModal } from './folder-form-modal';
 
 type CurrentFolderPanelProps = Readonly<{
   currentFolder: { id: string; name: string } | null;
   errorMessage: string | null;
   noticeMessage: string | null;
   isPending: boolean;
+  onOpenCreateFolderModal: () => void;
+  onOpenUploadModal: () => void;
   onRequestDeleteCurrentFolder: () => void;
-  onRenameCurrentFolder: (nextName: string) => Promise<void>;
+  onRenameCurrentFolder: (nextName: string) => Promise<boolean>;
   onSelectFolder: (folderId: string | null) => void;
   pathItems: FolderPathItem[];
 }>;
@@ -26,80 +25,100 @@ export function CurrentFolderPanel({
   errorMessage,
   noticeMessage,
   isPending,
+  onOpenCreateFolderModal,
+  onOpenUploadModal,
   onRequestDeleteCurrentFolder,
   onRenameCurrentFolder,
   onSelectFolder,
   pathItems,
 }: CurrentFolderPanelProps) {
-  const [draftName, setDraftName] = useState(currentFolder?.name ?? '');
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [isRenameSubmitting, setIsRenameSubmitting] = useState(false);
 
-  useEffect(() => {
-    setDraftName(currentFolder?.name ?? '');
-  }, [currentFolder?.id, currentFolder?.name]);
+  async function handleRenameFolder(name: string) {
+    setIsRenameSubmitting(true);
+
+    try {
+      const renamed = await onRenameCurrentFolder(name);
+
+      if (renamed) {
+        setIsRenameModalOpen(false);
+      }
+    } finally {
+      setIsRenameSubmitting(false);
+    }
+  }
 
   return (
-    <section className="neo-card bg-sky p-5">
+    <section className="space-y-3">
       <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-              {currentFolderPanelCopy.currentLocationEyebrow}
-            </p>
-            <h2 className="mt-2 font-display text-3xl uppercase leading-none text-ink">
-              {currentFolder?.name ?? folderBrowserCopy.rootWorkspaceTitle}
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm font-bold text-ink/80">
-              {currentFolder
-                ? folderBrowserCopy.nestedLocationDescription
-                : folderBrowserCopy.rootLocationDescription}
-            </p>
-          </div>
+        <div className="neo-card flex flex-col gap-3 bg-white px-3 py-3 md:flex-row md:items-center md:justify-between">
+          <FolderBreadcrumbs items={pathItems} onSelect={onSelectFolder} />
 
-          <div className="neo-badge bg-white">
-            {currentFolder
-              ? folderBrowserCopy.nestedLevelBadge
-              : folderBrowserCopy.rootLevelBadge}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              className="px-3 py-1.5 text-xs font-medium tracking-[0.04em]"
+              disabled={isPending}
+              onClick={onOpenCreateFolderModal}
+              variant="primary"
+            >
+              New Folder
+            </Button>
+            <Button
+              className="px-3 py-1.5 text-xs font-medium tracking-[0.04em]"
+              disabled={isPending}
+              onClick={onOpenUploadModal}
+              variant="mint"
+            >
+              New File
+            </Button>
+            {currentFolder ? (
+              <ActionMenu
+                compact
+                items={[
+                  {
+                    disabled: isPending,
+                    label: 'Rename Folder',
+                    onSelect: () => setIsRenameModalOpen(true),
+                  },
+                  {
+                    danger: true,
+                    disabled: isPending,
+                    label: 'Delete Folder',
+                    onSelect: onRequestDeleteCurrentFolder,
+                  },
+                ]}
+              />
+            ) : null}
           </div>
         </div>
 
-        <FolderBreadcrumbs items={pathItems} onSelect={onSelectFolder} />
-
-        {currentFolder ? (
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-            <Input
-              disabled={isPending}
-              onChange={(event) => setDraftName(event.target.value)}
-              value={draftName}
-            />
-            <Button
-              disabled={isPending || draftName.trim().length === 0}
-              onClick={() => void onRenameCurrentFolder(draftName)}
-              variant="primary"
-            >
-              {folderBrowserCopy.renameCurrentButtonLabel}
-            </Button>
-            <Button
-              disabled={isPending}
-              onClick={onRequestDeleteCurrentFolder}
-              variant="ink"
-            >
-              {folderBrowserCopy.deleteCurrentButtonLabel}
-            </Button>
-          </div>
-        ) : null}
-
         {errorMessage ? (
-          <div className="neo-card bg-blush p-4 text-sm font-bold text-ink">
+          <div className="neo-card bg-blush px-4 py-3 text-sm font-medium text-ink">
             {errorMessage}
           </div>
         ) : null}
 
         {noticeMessage ? (
-          <div className="neo-card bg-mint p-4 text-sm font-bold text-ink">
+          <div className="neo-card bg-mint px-4 py-3 text-sm font-medium text-ink">
             {noticeMessage}
           </div>
         ) : null}
       </div>
+
+      {isRenameModalOpen && currentFolder ? (
+        <div>
+          <FolderFormModal
+          description={`Rename ${currentFolder.name}.`}
+          initialName={currentFolder.name}
+          isSubmitting={isRenameSubmitting}
+          onClose={() => setIsRenameModalOpen(false)}
+          onSubmit={handleRenameFolder}
+          submitLabel="Save Changes"
+          title="Rename Folder"
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

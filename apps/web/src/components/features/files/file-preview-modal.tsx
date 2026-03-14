@@ -2,6 +2,8 @@
 
 import type { FileItem } from '@/api/files/files.model';
 import { Button } from '@/components/ui/button';
+import { ModalShell } from '@/components/ui/modal-shell';
+import { truncateLongWords } from '@/shared/utils/truncate-long-words';
 
 type FilePreviewModalProps = Readonly<{
   file: FileItem;
@@ -14,46 +16,43 @@ export function FilePreviewModal({
   previewUrl,
   onClose,
 }: FilePreviewModalProps) {
+  const fileLabel = truncateLongWords(file.name);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="neo-card flex h-[85vh] w-full max-w-6xl flex-col overflow-hidden bg-cream">
-        <div className="flex flex-col gap-4 border-b-4 border-black bg-lemon p-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-              File preview
-            </p>
-            <h2 className="mt-2 break-words font-display text-3xl uppercase leading-none text-ink">
-              {file.name}
-            </h2>
-            <p className="mt-3 text-sm font-bold text-ink/80">
-              The preview stays inside the dashboard. If the browser cannot render this
-              file type inline, use the raw file link below.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <a
-              className="neo-button bg-white"
-              href={previewUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Open Raw File
-            </a>
-            <Button onClick={onClose} variant="ink">
-              Close
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex-1 bg-white p-4">
-          <iframe
-            className="h-full w-full rounded-[1.5rem] border-4 border-black bg-white"
-            src={previewUrl}
-            title={`Preview ${file.name}`}
-          />
+    <ModalShell
+      bodyClassName="bg-white p-4"
+      description="The preview stays inside the app. If the browser cannot render this file type inline, use the raw file link below."
+      eyebrow="File preview"
+      headerActions={
+        <>
+          <a
+            className="neo-button bg-white"
+            href={previewUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open Raw File
+          </a>
+          <Button onClick={onClose} variant="ink">
+            Close
+          </Button>
+        </>
+      }
+      onClose={onClose}
+      size="xl"
+      title={fileLabel}
+      tone="lemon"
+    >
+      <div className="flex h-[60vh] flex-col gap-4 lg:h-[68vh]">
+        <iframe
+          className="h-full w-full rounded-[18px] border-2 border-black bg-white"
+          src={previewUrl}
+          title={`Preview ${file.name}`}
+        />
+        <div className="neo-card bg-sky p-4 text-sm font-bold text-ink">
+          Inline preview depends on browser support for the current file type. If the frame looks blank, use `Open Raw File`.
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

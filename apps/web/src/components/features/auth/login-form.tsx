@@ -55,8 +55,8 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
         </p>
       }
       badge="Login"
-      description="Sign in to the MVP and land in the protected dashboard shell. This phase proves the auth contract before any file workflows ship."
-      title="Step Into Your Drive"
+      description="Sign in to manage your folders, files, and shares."
+      title="Welcome Back"
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <div className="space-y-2">
@@ -95,7 +95,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
                 password: event.target.value,
               }))
             }
-            placeholder="Minimum 8 characters"
+            placeholder="Your password"
             required
             type="password"
             value={formState.password}
@@ -107,7 +107,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
         ) : null}
 
         <Button disabled={isBusy} fullWidth type="submit" variant="primary">
-          {isBusy ? 'Signing In...' : 'Log In'}
+          {isBusy ? 'Logging In...' : 'Log In'}
         </Button>
       </form>
     </AuthFormShell>

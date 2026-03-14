@@ -4,7 +4,8 @@ import { ReactQueryProvider } from '@/providers/react-query-provider';
 
 export const metadata: Metadata = {
   title: 'Drive MVP',
-  description: 'Authentication-ready MVP for a file storage and sharing platform.',
+  description:
+    'Neo-Brutalist file storage and sharing MVP with NestJS, Next.js, S3 uploads, permissions, and realtime updates.',
 };
 
 type RootLayoutProps = Readonly<{

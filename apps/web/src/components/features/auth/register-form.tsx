@@ -53,8 +53,8 @@ export function RegisterForm() {
         </p>
       }
       badge="Register"
-      description="Open a new account for the Drive MVP. Registration instantly issues a JWT session so you land inside the protected dashboard."
-      title="Create Your Access"
+      description="Create an account and start working with files right away."
+      title="Create Account"
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <div className="space-y-2">
@@ -93,7 +93,7 @@ export function RegisterForm() {
                 password: event.target.value,
               }))
             }
-            placeholder="Choose a strong password"
+            placeholder="Create a password"
             required
             type="password"
             value={formState.password}

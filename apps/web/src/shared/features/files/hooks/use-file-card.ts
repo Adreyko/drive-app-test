@@ -16,37 +16,28 @@ export function useFileCard({
   onOpen,
   onUpdate,
 }: UseFileCardOptions) {
-  const [draftName, setDraftName] = useState(file.name);
-  const [draftFolderId, setDraftFolderId] = useState(file.folderId ?? '');
-  const [draftVisibility, setDraftVisibility] = useState(file.visibility);
-  const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const canRename = file.accessRole !== 'viewer';
   const canMove = file.isOwned;
   const canDelete = file.isOwned;
   const canChangeVisibility = file.isOwned;
 
   useEffect(() => {
-    setDraftName(file.name);
-    setDraftFolderId(file.folderId ?? '');
-    setDraftVisibility(file.visibility);
-  }, [file.folderId, file.name, file.visibility]);
+    if (!canRename) {
+      setIsEditModalOpen(false);
+    }
+  }, [canRename]);
 
-  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSave(input: UpdateFileInput) {
     setIsSubmitting(true);
 
     try {
-      const updated = await onUpdate(file, {
-        id: file.id,
-        name: draftName.trim(),
-        ...(canMove ? { folderId: draftFolderId || null } : {}),
-        ...(canChangeVisibility ? { visibility: draftVisibility } : {}),
-      });
+      const updated = await onUpdate(file, input);
 
       if (updated) {
-        setIsEditing(false);
+        setIsEditModalOpen(false);
       }
     } finally {
       setIsSubmitting(false);
@@ -74,37 +65,20 @@ export function useFileCard({
     }
   }
 
-  function resetDrafts(): void {
-    setDraftName(file.name);
-    setDraftFolderId(file.folderId ?? '');
-    setDraftVisibility(file.visibility);
-  }
-
-  function cancelEditing(): void {
-    resetDrafts();
-    setIsEditing(false);
-  }
-
   return {
     canChangeVisibility,
     canDelete,
     canMove,
     canRename,
-    cancelEditing,
-    draftFolderId,
-    draftName,
-    draftVisibility,
     handleDelete,
     handleOpen,
     handleSave,
     isDeleteModalOpen,
-    isEditing,
+    isEditModalOpen,
     isSubmitting,
+    closeEditModal: () => setIsEditModalOpen(false),
     openDeleteModal: () => setIsDeleteModalOpen(true),
     closeDeleteModal: () => setIsDeleteModalOpen(false),
-    setDraftFolderId,
-    setDraftName,
-    setDraftVisibility,
-    toggleEditing: () => setIsEditing((current) => !current),
+    openEditModal: () => setIsEditModalOpen(true),
   };
 }
