@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { FolderItem } from '@/api/folders/folders.model';
 import { Button } from '@/components/ui/button';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { Input } from '@/components/ui/input';
 
 type FolderCardProps = Readonly<{
@@ -23,6 +24,7 @@ export function FolderCard({
   const [draftName, setDraftName] = useState(folder.name);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     setDraftName(folder.name);
@@ -44,18 +46,11 @@ export function FolderCard({
   }
 
   async function handleDelete() {
-    if (
-      !window.confirm(
-        `Delete "${folder.name}" and all nested subfolders from this folder tree?`,
-      )
-    ) {
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
       await onDelete(folder);
+      setIsDeleteModalOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -133,11 +128,26 @@ export function FolderCard({
           >
             {isEditing ? 'Hide Rename' : 'Rename'}
           </Button>
-          <Button disabled={isSubmitting} onClick={handleDelete} variant="ink">
+          <Button
+            disabled={isSubmitting}
+            onClick={() => setIsDeleteModalOpen(true)}
+            variant="ink"
+          >
             Delete
           </Button>
         </div>
       </div>
+
+      {isDeleteModalOpen ? (
+        <ConfirmationModal
+          confirmLabel="Delete Folder"
+          description={`Delete "${folder.name}" and every nested subfolder inside this branch.`}
+          isLoading={isSubmitting}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDelete}
+          title="Delete Folder?"
+        />
+      ) : null}
     </article>
   );
 }

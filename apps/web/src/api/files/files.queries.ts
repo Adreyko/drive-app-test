@@ -3,7 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FilesApi } from './files.api';
 import type {
+  DownloadUrlResponse,
   FileItem,
+  UpdateFileInput,
   UploadFileInput,
 } from './files.model';
 
@@ -49,5 +51,37 @@ export function useUploadFileMutation() {
         queryKey: filesQueryKeys.all,
       });
     },
+  });
+}
+
+export function useUpdateFileMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<FileItem, Error, UpdateFileInput>({
+    mutationFn: FilesApi.update,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: filesQueryKeys.all,
+      });
+    },
+  });
+}
+
+export function useDeleteFileMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string>({
+    mutationFn: FilesApi.remove,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: filesQueryKeys.all,
+      });
+    },
+  });
+}
+
+export function useDownloadFileUrlMutation() {
+  return useMutation<DownloadUrlResponse, Error, string>({
+    mutationFn: FilesApi.getDownloadUrl,
   });
 }

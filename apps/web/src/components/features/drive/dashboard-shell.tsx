@@ -10,10 +10,10 @@ import { FolderBrowser } from '@/components/features/folders/folder-browser';
 import { Button } from '@/components/ui/button';
 import { clearAuthToken } from '@/lib/auth/token-storage';
 
-const folderRules = [
+const workspaceRules = [
   'Create nested folders from any current location',
   'Upload directly to S3 with a presigned URL',
-  'See uploaded file metadata grouped by folder',
+  'Rename, move, open, and delete files from the dashboard',
 ];
 
 export function DashboardShell() {
@@ -85,16 +85,16 @@ export function DashboardShell() {
       <section className="neo-card bg-mint p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-4">
-            <span className="neo-badge bg-white">Phase 4 / Folders + Uploads</span>
+            <span className="neo-badge bg-white">Phase 5 / File Management</span>
             <div>
               <h1 className="font-display text-4xl uppercase leading-none md:text-6xl">
                 Build Your Storage Grid.
               </h1>
               <p className="mt-4 max-w-2xl text-lg font-bold text-ink">
                 You are authenticated as <span className="underline">{user.email}</span>.
-                This phase adds direct file uploads to S3, metadata records in
-                PostgreSQL, and file lists that follow your current folder
-                location in the dashboard.
+                This phase adds file rename, move, open, and delete actions on
+                top of direct S3 uploads, metadata records, and the nested
+                folder browser.
               </p>
             </div>
           </div>
@@ -137,10 +137,10 @@ export function DashboardShell() {
 
           <article className="neo-card bg-blush p-6">
             <p className="text-sm font-black uppercase tracking-[0.16em] text-ink">
-              Folder Rules
+              Workspace Rules
             </p>
             <div className="mt-5 space-y-4">
-              {folderRules.map((rule) => (
+              {workspaceRules.map((rule) => (
                 <div key={rule} className="neo-card bg-white p-4">
                   <p className="text-sm font-bold text-ink">{rule}</p>
                 </div>

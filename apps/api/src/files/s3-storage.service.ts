@@ -2,6 +2,8 @@ import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -82,6 +84,17 @@ export class S3StorageService {
     });
   }
 
+  async createDownloadUrl(key: string): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+
+    return getSignedUrl(this.presignClient, command, {
+      expiresIn: this.expiresIn,
+    });
+  }
+
   async getStoredObjectSize(key: string): Promise<number | null> {
     try {
       const response = await this.internalClient.send(
@@ -99,6 +112,15 @@ export class S3StorageService {
 
       throw error;
     }
+  }
+
+  async removeObject(key: string): Promise<void> {
+    await this.internalClient.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+    );
   }
 }
 

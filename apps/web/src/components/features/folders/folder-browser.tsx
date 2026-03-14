@@ -4,8 +4,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { authQueryKeys } from '@/api/auth/auth.queries';
-import { filesQueryKeys, useFilesQuery, useUploadFileMutation } from '@/api/files/files.queries';
-import type { FileItem } from '@/api/files/files.model';
+import {
+  filesQueryKeys,
+  useDeleteFileMutation,
+  useDownloadFileUrlMutation,
+  useFilesQuery,
+  useUpdateFileMutation,
+  useUploadFileMutation,
+} from '@/api/files/files.queries';
+import type { FileItem, UpdateFileInput } from '@/api/files/files.model';
 import {
   foldersQueryKeys,
   useCreateFolderMutation,
@@ -16,8 +23,11 @@ import {
 import type { FolderItem } from '@/api/folders/folders.model';
 import { getApiErrorMessage, isUnauthorizedError } from '@/api/client';
 import { FileList } from '@/components/features/files/file-list';
+import type { FileFolderOption } from '@/components/features/files/file-card';
+import { FilePreviewModal } from '@/components/features/files/file-preview-modal';
 import { FileUploadPanel } from '@/components/features/files/file-upload-panel';
 import { Button } from '@/components/ui/button';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { Input } from '@/components/ui/input';
 import { clearAuthToken } from '@/lib/auth/token-storage';
 import { FolderBreadcrumbs } from './folder-breadcrumbs';
@@ -55,11 +65,45 @@ function buildBreadcrumbItems(
   return items;
 }
 
+function buildFolderOptions(folders: FolderItem[]): FileFolderOption[] {
+  const foldersMap = new Map(folders.map((folder) => [folder.id, folder]));
+  const options: FileFolderOption[] = [
+    {
+      id: null,
+      label: 'Root workspace',
+    },
+  ];
+
+  const nestedOptions = folders
+    .map((folder) => ({
+      id: folder.id,
+      label: buildFolderPathLabel(foldersMap, folder.id),
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+
+  return [...options, ...nestedOptions];
+}
+
+function buildFolderPathLabel(
+  foldersMap: Map<string, FolderItem>,
+  folderId: string,
+): string {
+  const path: string[] = [];
+  let cursor = foldersMap.get(folderId) ?? null;
+
+  while (cursor) {
+    path.unshift(cursor.name);
+    cursor = cursor.parentId ? foldersMap.get(cursor.parentId) ?? null : null;
+  }
+
+  return ['Root', ...path].join(' / ');
+}
+
 type CurrentFolderPanelProps = Readonly<{
   currentFolder: FolderItem | null;
   errorMessage: string | null;
   isPending: boolean;
-  onDeleteCurrentFolder: () => Promise<void>;
+  onRequestDeleteCurrentFolder: () => void;
   onRenameCurrentFolder: (nextName: string) => Promise<void>;
   onSelectFolder: (folderId: string | null) => void;
   pathItems: Array<{ id: string | null; name: string }>;
@@ -69,7 +113,7 @@ function CurrentFolderPanel({
   currentFolder,
   errorMessage,
   isPending,
-  onDeleteCurrentFolder,
+  onRequestDeleteCurrentFolder,
   onRenameCurrentFolder,
   onSelectFolder,
   pathItems,
@@ -121,7 +165,7 @@ function CurrentFolderPanel({
             </Button>
             <Button
               disabled={isPending}
-              onClick={() => void onDeleteCurrentFolder()}
+              onClick={onRequestDeleteCurrentFolder}
               variant="ink"
             >
               Delete Current
@@ -146,12 +190,19 @@ export function FolderBrowser() {
   const [newFolderName, setNewFolderName] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(null);
+  const [isCurrentFolderDeleteModalOpen, setIsCurrentFolderDeleteModalOpen] =
+    useState(false);
+  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const foldersQuery = useFoldersQuery();
   const filesQuery = useFilesQuery();
   const createFolderMutation = useCreateFolderMutation();
   const renameFolderMutation = useRenameFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
   const uploadFileMutation = useUploadFileMutation();
+  const updateFileMutation = useUpdateFileMutation();
+  const deleteFileMutation = useDeleteFileMutation();
+  const downloadFileUrlMutation = useDownloadFileUrlMutation();
   const folders = foldersQuery.data ?? [];
   const files = filesQuery.data ?? [];
   const currentFolder =
@@ -161,11 +212,14 @@ export function FolderBrowser() {
   );
   const visibleFiles = files.filter((file) => file.folderId === currentFolderId);
   const pathItems = buildBreadcrumbItems(folders, currentFolderId);
+  const folderOptions = buildFolderOptions(folders);
   const isMutating =
     createFolderMutation.isPending ||
     renameFolderMutation.isPending ||
     deleteFolderMutation.isPending ||
-    uploadFileMutation.isPending;
+    uploadFileMutation.isPending ||
+    updateFileMutation.isPending ||
+    deleteFileMutation.isPending;
 
   useEffect(() => {
     const authError = foldersQuery.error ?? filesQuery.error;
@@ -272,15 +326,56 @@ export function FolderBrowser() {
       return;
     }
 
-    if (
-      !window.confirm(
-        `Delete "${currentFolder.name}" and every nested subfolder inside it?`,
-      )
-    ) {
-      return;
-    }
-
     await handleDeleteFolder(currentFolder);
+    setIsCurrentFolderDeleteModalOpen(false);
+  }
+
+  async function handleUpdateFile(
+    file: FileItem,
+    input: UpdateFileInput,
+  ): Promise<boolean> {
+    setActionError(null);
+
+    try {
+      await updateFileMutation.mutateAsync({
+        id: file.id,
+        name: input.name,
+        folderId: input.folderId,
+      });
+
+      return true;
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, 'Could not update file.'));
+
+      return false;
+    }
+  }
+
+  async function handleDeleteFile(file: FileItem): Promise<void> {
+    setActionError(null);
+
+    try {
+      await deleteFileMutation.mutateAsync(file.id);
+
+      if (previewFile?.id === file.id) {
+        setPreviewFile(null);
+        setPreviewUrl(null);
+      }
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, 'Could not delete file.'));
+    }
+  }
+
+  async function handleOpenFile(file: FileItem): Promise<void> {
+    setActionError(null);
+
+    try {
+      const download = await downloadFileUrlMutation.mutateAsync(file.id);
+      setPreviewFile(file);
+      setPreviewUrl(download.downloadUrl);
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, 'Could not open file.'));
+    }
   }
 
   if (foldersQuery.isLoading) {
@@ -347,7 +442,7 @@ export function FolderBrowser() {
         currentFolder={currentFolder}
         errorMessage={actionError}
         isPending={isMutating}
-        onDeleteCurrentFolder={handleDeleteCurrentFolder}
+        onRequestDeleteCurrentFolder={() => setIsCurrentFolderDeleteModalOpen(true)}
         onRenameCurrentFolder={handleRenameCurrentFolder}
         onSelectFolder={setCurrentFolderId}
         pathItems={pathItems}
@@ -404,7 +499,14 @@ export function FolderBrowser() {
         </form>
       </article>
 
-      <FileList currentFolderName={currentFolder?.name ?? null} files={visibleFiles} />
+      <FileList
+        currentFolderName={currentFolder?.name ?? null}
+        files={visibleFiles}
+        folderOptions={folderOptions}
+        onDelete={handleDeleteFile}
+        onOpen={handleOpenFile}
+        onUpdate={handleUpdateFile}
+      />
 
       <article className="neo-card bg-blush p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -447,6 +549,28 @@ export function FolderBrowser() {
           </div>
         )}
       </article>
+
+      {previewFile && previewUrl ? (
+        <FilePreviewModal
+          file={previewFile}
+          onClose={() => {
+            setPreviewFile(null);
+            setPreviewUrl(null);
+          }}
+          previewUrl={previewUrl}
+        />
+      ) : null}
+
+      {isCurrentFolderDeleteModalOpen && currentFolder ? (
+        <ConfirmationModal
+          confirmLabel="Delete Current Folder"
+          description={`Delete "${currentFolder.name}" and every nested subfolder inside it.`}
+          isLoading={deleteFolderMutation.isPending}
+          onClose={() => setIsCurrentFolderDeleteModalOpen(false)}
+          onConfirm={handleDeleteCurrentFolder}
+          title="Delete Current Folder?"
+        />
+      ) : null}
     </section>
   );
 }

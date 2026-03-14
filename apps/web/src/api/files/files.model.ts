@@ -34,6 +34,17 @@ export type CreateFileInput = {
   folderId?: string | null;
 };
 
+export type UpdateFileInput = {
+  id: string;
+  name?: string;
+  folderId?: string | null;
+};
+
+export type DownloadUrlResponse = {
+  downloadUrl: string;
+  method: 'GET';
+};
+
 export type UploadFileInput = {
   file: globalThis.File;
   folderId?: string | null;

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -9,7 +10,9 @@ import { Repository } from 'typeorm';
 import { Folder } from '../folders/entities/folder.entity';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
+import { UpdateFileDto } from './dto/update-file.dto';
 import { File } from './entities/file.entity';
+import { type DownloadUrlResponse } from './interfaces/download-url-response.interface';
 import { type UploadUrlResponse } from './interfaces/upload-url-response.interface';
 import { S3StorageService } from './s3-storage.service';
 
@@ -114,6 +117,67 @@ export class FilesService {
     return this.filesRepository.save(file);
   }
 
+  async update(
+    ownerId: string,
+    fileId: string,
+    updateFileDto: UpdateFileDto,
+  ): Promise<File> {
+    const file = await this.getOwnedFileOrFail(ownerId, fileId);
+    const hasNameUpdate = updateFileDto.name !== undefined;
+    const hasFolderUpdate = updateFileDto.folderId !== undefined;
+
+    if (!hasNameUpdate && !hasFolderUpdate) {
+      throw new BadRequestException(
+        'Provide at least one file field to update.',
+      );
+    }
+
+    if (hasNameUpdate) {
+      file.name = updateFileDto.name!;
+    }
+
+    if (hasFolderUpdate) {
+      const nextFolderId = updateFileDto.folderId ?? null;
+
+      if (nextFolderId) {
+        await this.getOwnedFolderOrFail(ownerId, nextFolderId);
+      }
+
+      file.folderId = nextFolderId;
+    }
+
+    return this.filesRepository.save(file);
+  }
+
+  async remove(ownerId: string, fileId: string): Promise<void> {
+    const file = await this.getOwnedFileOrFail(ownerId, fileId);
+
+    await this.s3StorageService.removeObject(file.s3Key);
+    await this.filesRepository.delete({
+      id: file.id,
+      ownerId,
+    });
+  }
+
+  async createDownloadUrl(
+    ownerId: string,
+    fileId: string,
+  ): Promise<DownloadUrlResponse> {
+    const file = await this.getOwnedFileOrFail(ownerId, fileId);
+    const storedObjectSize = await this.s3StorageService.getStoredObjectSize(
+      file.s3Key,
+    );
+
+    if (storedObjectSize === null) {
+      throw new NotFoundException('Stored file not found.');
+    }
+
+    return {
+      downloadUrl: await this.s3StorageService.createDownloadUrl(file.s3Key),
+      method: 'GET',
+    };
+  }
+
   private async getOwnedFolderOrFail(
     ownerId: string,
     folderId: string,
@@ -130,5 +194,23 @@ export class FilesService {
     }
 
     return folder;
+  }
+
+  private async getOwnedFileOrFail(
+    ownerId: string,
+    fileId: string,
+  ): Promise<File> {
+    const file = await this.filesRepository.findOne({
+      where: {
+        id: fileId,
+        ownerId,
+      },
+    });
+
+    if (!file) {
+      throw new NotFoundException('File not found.');
+    }
+
+    return file;
   }
 }

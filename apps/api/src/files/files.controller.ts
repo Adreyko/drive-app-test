@@ -1,7 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -10,7 +16,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { type AuthenticatedUser } from '../auth/interfaces/auth.types';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
+import { UpdateFileDto } from './dto/update-file.dto';
 import { File } from './entities/file.entity';
+import { type DownloadUrlResponse } from './interfaces/download-url-response.interface';
 import { FilesService } from './files.service';
 import { type UploadUrlResponse } from './interfaces/upload-url-response.interface';
 
@@ -38,5 +46,31 @@ export class FilesController {
     @Body() createFileDto: CreateFileDto,
   ): Promise<File> {
     return this.filesService.createMetadataRecord(user.id, createFileDto);
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() updateFileDto: UpdateFileDto,
+  ): Promise<File> {
+    return this.filesService.update(user.id, id, updateFileDto);
+  }
+
+  @Get(':id/download-url')
+  getDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<DownloadUrlResponse> {
+    return this.filesService.createDownloadUrl(user.id, id);
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete(':id')
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<void> {
+    await this.filesService.remove(user.id, id);
   }
 }
