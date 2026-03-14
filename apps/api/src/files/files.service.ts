@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -73,6 +74,22 @@ export class FilesService {
 
     if (!createFileDto.s3Key.startsWith(`users/${ownerId}/`)) {
       throw new ConflictException('The uploaded object key is not valid.');
+    }
+
+    const storedObjectSize = await this.s3StorageService.getStoredObjectSize(
+      createFileDto.s3Key,
+    );
+
+    if (storedObjectSize === null) {
+      throw new UnprocessableEntityException(
+        'The uploaded file was not found in storage.',
+      );
+    }
+
+    if (storedObjectSize !== createFileDto.size) {
+      throw new UnprocessableEntityException(
+        'The uploaded file size does not match the stored object.',
+      );
     }
 
     const existingFile = await this.filesRepository.findOne({

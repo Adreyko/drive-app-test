@@ -1,7 +1,12 @@
 import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  S3ServiceException,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 type CreateUploadUrlInput = {
@@ -76,6 +81,25 @@ export class S3StorageService {
       expiresIn: this.expiresIn,
     });
   }
+
+  async getStoredObjectSize(key: string): Promise<number | null> {
+    try {
+      const response = await this.internalClient.send(
+        new HeadObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
+
+      return response.ContentLength ?? null;
+    } catch (error) {
+      if (isMissingObjectError(error)) {
+        return null;
+      }
+
+      throw error;
+    }
+  }
 }
 
 function sanitizeFileName(name: string): string {
@@ -84,4 +108,16 @@ function sanitizeFileName(name: string): string {
   const safeName = normalizedName.replaceAll(/[^a-z0-9._-]/g, '');
 
   return safeName || 'file';
+}
+
+function isMissingObjectError(error: unknown): boolean {
+  if (error instanceof S3ServiceException) {
+    return (
+      error.name === 'NotFound' ||
+      error.name === 'NoSuchKey' ||
+      error.$metadata?.httpStatusCode === 404
+    );
+  }
+
+  return false;
 }
