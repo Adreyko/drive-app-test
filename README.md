@@ -244,16 +244,6 @@ The frontend listens for `files:updated` and invalidates:
 - TypeORM `synchronize` stays enabled for MVP development speed.
 - Browser-native iframe preview is sufficient for this submission.
 
-## Known Limitations
-
-- No collaborative editing
-- No file version history
-- No comments or activity feed
-- No advanced search or preview generation pipeline
-- No anonymous public links
-- No pagination for large workspaces
-- No antivirus scanning or background processing
-
 ## Validation
 
 Run all checks:
@@ -264,7 +254,4 @@ npm run build
 ```
 
 ## Notes
-
 - Docker is the recommended way to run the MVP end to end.
-- The UI is intentionally Neo-Brutalist: thick borders, hard shadows, high-contrast blocks, and bold typography.
-- The project was implemented phase by phase so it can be resumed from any completed phase without rebuilding prior work.
