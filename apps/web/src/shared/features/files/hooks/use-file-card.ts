@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { FileItem, UpdateFileInput } from '@/api/files/files.model';
+import { useDisclosure } from '@/shared/hooks/use-disclosure';
 
 type UseFileCardOptions = Readonly<{
   file: FileItem;
@@ -17,8 +18,12 @@ export function useFileCard({
   onUpdate,
 }: UseFileCardOptions) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const deleteModal = useDisclosure();
+  const editModal = useDisclosure();
+  const closeEditModal = editModal.close;
+  const closeDeleteModal = deleteModal.close;
+  const openEditModal = editModal.open;
+  const openDeleteModal = deleteModal.open;
   const canRename = file.accessRole !== 'viewer';
   const canMove = file.isOwned;
   const canDelete = file.isOwned;
@@ -26,9 +31,9 @@ export function useFileCard({
 
   useEffect(() => {
     if (!canRename) {
-      setIsEditModalOpen(false);
+      closeEditModal();
     }
-  }, [canRename]);
+  }, [canRename, closeEditModal]);
 
   async function handleSave(input: UpdateFileInput) {
     setIsSubmitting(true);
@@ -37,7 +42,7 @@ export function useFileCard({
       const updated = await onUpdate(file, input);
 
       if (updated) {
-        setIsEditModalOpen(false);
+        closeEditModal();
       }
     } finally {
       setIsSubmitting(false);
@@ -59,7 +64,7 @@ export function useFileCard({
 
     try {
       await onDelete(file);
-      setIsDeleteModalOpen(false);
+      closeDeleteModal();
     } finally {
       setIsSubmitting(false);
     }
@@ -73,12 +78,12 @@ export function useFileCard({
     handleDelete,
     handleOpen,
     handleSave,
-    isDeleteModalOpen,
-    isEditModalOpen,
+    isDeleteModalOpen: deleteModal.isOpen,
+    isEditModalOpen: editModal.isOpen,
     isSubmitting,
-    closeEditModal: () => setIsEditModalOpen(false),
-    openDeleteModal: () => setIsDeleteModalOpen(true),
-    closeDeleteModal: () => setIsDeleteModalOpen(false),
-    openEditModal: () => setIsEditModalOpen(true),
+    closeDeleteModal,
+    closeEditModal,
+    openDeleteModal,
+    openEditModal,
   };
 }

@@ -1,48 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import type { FolderPathItem } from '@/shared/features/folders/utils/folder-tree';
+import type { DriveWorkspaceCurrentFolderPanel } from '@/shared/features/drive/hooks/use-drive-workspace';
+import { useDisclosure } from '@/shared/hooks/use-disclosure';
 import { ActionMenu } from '@/components/ui/action-menu';
 import { Button } from '@/components/ui/button';
 import { FolderBreadcrumbs } from './folder-breadcrumbs';
 import { FolderFormModal } from './folder-form-modal';
 
 type CurrentFolderPanelProps = Readonly<{
-  currentFolder: { id: string; name: string } | null;
-  errorMessage: string | null;
-  noticeMessage: string | null;
-  isPending: boolean;
-  onOpenCreateFolderModal: () => void;
-  onOpenUploadModal: () => void;
-  onRequestDeleteCurrentFolder: () => void;
-  onRenameCurrentFolder: (nextName: string) => Promise<boolean>;
-  onSelectFolder: (folderId: string | null) => void;
-  pathItems: FolderPathItem[];
+  panel: DriveWorkspaceCurrentFolderPanel;
 }>;
 
-export function CurrentFolderPanel({
-  currentFolder,
-  errorMessage,
-  noticeMessage,
-  isPending,
-  onOpenCreateFolderModal,
-  onOpenUploadModal,
-  onRequestDeleteCurrentFolder,
-  onRenameCurrentFolder,
-  onSelectFolder,
-  pathItems,
-}: CurrentFolderPanelProps) {
-  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+export function CurrentFolderPanel({ panel }: CurrentFolderPanelProps) {
+  const renameModal = useDisclosure();
   const [isRenameSubmitting, setIsRenameSubmitting] = useState(false);
 
   async function handleRenameFolder(name: string) {
     setIsRenameSubmitting(true);
 
     try {
-      const renamed = await onRenameCurrentFolder(name);
+      const renamed = await panel.onRenameCurrentFolder(name);
 
       if (renamed) {
-        setIsRenameModalOpen(false);
+        renameModal.close();
       }
     } finally {
       setIsRenameSubmitting(false);
@@ -53,39 +34,39 @@ export function CurrentFolderPanel({
     <section className="space-y-3">
       <div className="flex flex-col gap-5">
         <div className="neo-card flex flex-col gap-3 bg-white px-3 py-3 md:flex-row md:items-center md:justify-between">
-          <FolderBreadcrumbs items={pathItems} onSelect={onSelectFolder} />
+          <FolderBreadcrumbs items={panel.pathItems} onSelect={panel.onSelectFolder} />
 
           <div className="flex flex-wrap items-center gap-2">
             <Button
               className="px-3 py-1.5 text-xs font-medium tracking-[0.04em]"
-              disabled={isPending}
-              onClick={onOpenCreateFolderModal}
+              disabled={panel.isPending}
+              onClick={panel.onOpenCreateFolderModal}
               variant="primary"
             >
               New Folder
             </Button>
             <Button
               className="px-3 py-1.5 text-xs font-medium tracking-[0.04em]"
-              disabled={isPending}
-              onClick={onOpenUploadModal}
+              disabled={panel.isPending}
+              onClick={panel.onOpenUploadModal}
               variant="mint"
             >
               New File
             </Button>
-            {currentFolder ? (
+            {panel.currentFolder ? (
               <ActionMenu
                 compact
                 items={[
                   {
-                    disabled: isPending,
+                    disabled: panel.isPending,
                     label: 'Rename Folder',
-                    onSelect: () => setIsRenameModalOpen(true),
+                    onSelect: renameModal.open,
                   },
                   {
                     danger: true,
-                    disabled: isPending,
+                    disabled: panel.isPending,
                     label: 'Delete Folder',
-                    onSelect: onRequestDeleteCurrentFolder,
+                    onSelect: panel.onRequestDeleteCurrentFolder,
                   },
                 ]}
               />
@@ -93,29 +74,29 @@ export function CurrentFolderPanel({
           </div>
         </div>
 
-        {errorMessage ? (
+        {panel.errorMessage ? (
           <div className="neo-card bg-blush px-4 py-3 text-sm font-medium text-ink">
-            {errorMessage}
+            {panel.errorMessage}
           </div>
         ) : null}
 
-        {noticeMessage ? (
+        {panel.noticeMessage ? (
           <div className="neo-card bg-mint px-4 py-3 text-sm font-medium text-ink">
-            {noticeMessage}
+            {panel.noticeMessage}
           </div>
         ) : null}
       </div>
 
-      {isRenameModalOpen && currentFolder ? (
+      {renameModal.isOpen && panel.currentFolder ? (
         <div>
           <FolderFormModal
-          description={`Rename ${currentFolder.name}.`}
-          initialName={currentFolder.name}
-          isSubmitting={isRenameSubmitting}
-          onClose={() => setIsRenameModalOpen(false)}
-          onSubmit={handleRenameFolder}
-          submitLabel="Save Changes"
-          title="Rename Folder"
+            description={`Rename ${panel.currentFolder.name}.`}
+            initialName={panel.currentFolder.name}
+            isSubmitting={isRenameSubmitting}
+            onClose={renameModal.close}
+            onSubmit={handleRenameFolder}
+            submitLabel="Save Changes"
+            title="Rename Folder"
           />
         </div>
       ) : null}

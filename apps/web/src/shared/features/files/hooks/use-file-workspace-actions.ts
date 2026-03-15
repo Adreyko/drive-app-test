@@ -10,43 +10,23 @@ import {
 import type { FileItem, UpdateFileInput } from '@/api/files/files.model';
 import { useShareFileMutation } from '@/api/sharing/sharing.queries';
 import type { ShareRole } from '@/api/sharing/sharing.model';
+import type { DriveWorkspaceState } from '@/shared/features/drive/hooks/use-drive-workspace-state';
 
 type ShareFileInput = {
   email: string;
   role: ShareRole;
 };
 
-type UseFileBrowserActionsOptions = Readonly<{
-  closePreview: () => void;
-  closeShareModal: () => void;
-  currentFolderId: string | null;
-  isUploadPublicView: boolean;
-  openPreview: (file: FileItem, url: string) => void;
-  previewFile: FileItem | null;
-  resetFeedback: () => void;
-  selectedFile: globalThis.File | null;
-  setIsUploadPublicView: (value: boolean) => void;
-  setSelectedFile: (file: globalThis.File | null) => void;
-  shareFile: FileItem | null;
-  showError: (message: string) => void;
-  showNotice: (message: string) => void;
+type UseFileWorkspaceActionsOptions = Readonly<{
+  state: Pick<
+    DriveWorkspaceState,
+    'feedback' | 'location' | 'modals' | 'upload'
+  >;
 }>;
 
-export function useFileBrowserActions({
-  closePreview,
-  closeShareModal,
-  currentFolderId,
-  isUploadPublicView,
-  openPreview,
-  previewFile,
-  resetFeedback,
-  selectedFile,
-  setIsUploadPublicView,
-  setSelectedFile,
-  shareFile,
-  showError,
-  showNotice,
-}: UseFileBrowserActionsOptions) {
+export function useFileWorkspaceActions({
+  state,
+}: UseFileWorkspaceActionsOptions) {
   const uploadFileMutation = useUploadFileMutation();
   const updateFileMutation = useUpdateFileMutation();
   const deleteFileMutation = useDeleteFileMutation();
@@ -54,26 +34,28 @@ export function useFileBrowserActions({
   const shareFileMutation = useShareFileMutation();
 
   async function uploadFile(): Promise<boolean> {
-    if (!selectedFile) {
-      showError('Select a file before uploading.');
+    if (!state.upload.selectedFile) {
+      state.feedback.showError('Select a file before uploading.');
       return false;
     }
 
-    resetFeedback();
+    state.feedback.resetFeedback();
 
     try {
-      const uploadedFileName = selectedFile.name;
+      const uploadedFileName = state.upload.selectedFile.name;
       await uploadFileMutation.mutateAsync({
-        file: selectedFile,
-        folderId: currentFolderId,
-        visibility: isUploadPublicView ? 'public' : 'private',
+        file: state.upload.selectedFile,
+        folderId: state.location.currentFolderId,
+        visibility: state.upload.isUploadPublicView ? 'public' : 'private',
       });
-      setSelectedFile(null);
-      setIsUploadPublicView(false);
-      showNotice(`Uploaded "${uploadedFileName}".`);
+      state.upload.setSelectedFile(null);
+      state.upload.setIsUploadPublicView(false);
+      state.feedback.showNotice(`Uploaded "${uploadedFileName}".`);
       return true;
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Could not upload file.'));
+      state.feedback.showError(
+        getApiErrorMessage(error, 'Could not upload file.'),
+      );
       return false;
     }
   }
@@ -82,7 +64,7 @@ export function useFileBrowserActions({
     file: FileItem,
     input: UpdateFileInput,
   ): Promise<boolean> {
-    resetFeedback();
+    state.feedback.resetFeedback();
 
     try {
       await updateFileMutation.mutateAsync({
@@ -94,52 +76,58 @@ export function useFileBrowserActions({
 
       return true;
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Could not update file.'));
+      state.feedback.showError(
+        getApiErrorMessage(error, 'Could not update file.'),
+      );
 
       return false;
     }
   }
 
   async function deleteFile(file: FileItem): Promise<void> {
-    resetFeedback();
+    state.feedback.resetFeedback();
 
     try {
       await deleteFileMutation.mutateAsync(file.id);
 
-      if (previewFile?.id === file.id) {
-        closePreview();
+      if (state.modals.previewFile?.id === file.id) {
+        state.modals.closePreview();
       }
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Could not delete file.'));
+      state.feedback.showError(
+        getApiErrorMessage(error, 'Could not delete file.'),
+      );
     }
   }
 
   async function openFile(file: FileItem): Promise<void> {
-    resetFeedback();
+    state.feedback.resetFeedback();
 
     try {
       const download = await downloadFileUrlMutation.mutateAsync(file.id);
-      openPreview(file, download.downloadUrl);
+      state.modals.openPreview(file, download.downloadUrl);
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Could not open file.'));
+      state.feedback.showError(getApiErrorMessage(error, 'Could not open file.'));
     }
   }
 
   async function submitShareFile(input: ShareFileInput): Promise<void> {
-    if (!shareFile) {
+    if (!state.modals.shareFile) {
       return;
     }
 
-    resetFeedback();
+    state.feedback.resetFeedback();
 
     await shareFileMutation.mutateAsync({
       email: input.email,
-      fileId: shareFile.id,
+      fileId: state.modals.shareFile.id,
       role: input.role,
     });
 
-    showNotice(`Shared "${shareFile.name}" with ${input.email} as ${input.role}.`);
-    closeShareModal();
+    state.feedback.showNotice(
+      `Shared "${state.modals.shareFile.name}" with ${input.email} as ${input.role}.`,
+    );
+    state.modals.closeShareModal();
   }
 
   return {

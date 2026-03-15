@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { FileItem } from '@/api/files/files.model';
+import { useDisclosure } from '@/shared/hooks/use-disclosure';
 
 export function useDriveWorkspaceState() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -9,11 +10,10 @@ export function useDriveWorkspaceState() {
     null,
   );
   const [isUploadPublicView, setIsUploadPublicView] = useState(false);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const uploadModal = useDisclosure();
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const [isCurrentFolderDeleteModalOpen, setIsCurrentFolderDeleteModalOpen] =
-    useState(false);
+  const currentFolderDeleteModal = useDisclosure();
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [shareFile, setShareFile] = useState<FileItem | null>(null);
@@ -34,11 +34,11 @@ export function useDriveWorkspaceState() {
   }
 
   function openCurrentFolderDeleteModal(): void {
-    setIsCurrentFolderDeleteModalOpen(true);
+    currentFolderDeleteModal.open();
   }
 
   function closeCurrentFolderDeleteModal(): void {
-    setIsCurrentFolderDeleteModalOpen(false);
+    currentFolderDeleteModal.close();
   }
 
   function openPreview(file: FileItem, url: string): void {
@@ -60,11 +60,11 @@ export function useDriveWorkspaceState() {
   }
 
   function openUploadModal(): void {
-    setIsUploadModalOpen(true);
+    uploadModal.open();
   }
 
   function closeUploadModal(): void {
-    setIsUploadModalOpen(false);
+    uploadModal.close();
     setSelectedFile(null);
     setIsUploadPublicView(false);
   }
@@ -85,7 +85,7 @@ export function useDriveWorkspaceState() {
       closeCurrentFolderDeleteModal,
       closePreview,
       closeShareModal,
-      isCurrentFolderDeleteModalOpen,
+      isCurrentFolderDeleteModalOpen: currentFolderDeleteModal.isOpen,
       openCurrentFolderDeleteModal,
       openPreview,
       openShareModal,
@@ -96,7 +96,7 @@ export function useDriveWorkspaceState() {
     upload: {
       closeUploadModal,
       isUploadPublicView,
-      isUploadModalOpen,
+      isUploadModalOpen: uploadModal.isOpen,
       openUploadModal,
       selectedFile,
       setIsUploadPublicView,
@@ -104,3 +104,9 @@ export function useDriveWorkspaceState() {
     },
   };
 }
+
+export type DriveWorkspaceState = ReturnType<typeof useDriveWorkspaceState>;
+export type DriveWorkspaceFeedbackState = DriveWorkspaceState['feedback'];
+export type DriveWorkspaceLocationState = DriveWorkspaceState['location'];
+export type DriveWorkspaceModalState = DriveWorkspaceState['modals'];
+export type DriveWorkspaceUploadState = DriveWorkspaceState['upload'];

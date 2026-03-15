@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { FolderItem } from '@/api/folders/folders.model';
+import { useDisclosure } from '@/shared/hooks/use-disclosure';
 import { truncateLongWords } from '@/shared/utils/truncate-long-words';
 import { ActionMenu } from '@/components/ui/action-menu';
 import { Button } from '@/components/ui/button';
@@ -24,16 +25,16 @@ export function FolderCard({
   onRename,
 }: FolderCardProps) {
   const folderLabel = truncateLongWords(folder.name);
-  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const renameModal = useDisclosure();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const deleteModal = useDisclosure();
 
   async function handleDelete() {
     setIsSubmitting(true);
 
     try {
       await onDelete(folder);
-      setIsDeleteModalOpen(false);
+      deleteModal.close();
     } finally {
       setIsSubmitting(false);
     }
@@ -46,7 +47,7 @@ export function FolderCard({
       const renamed = await onRename(folder, name);
 
       if (renamed) {
-        setIsRenameModalOpen(false);
+        renameModal.close();
       }
     } finally {
       setIsSubmitting(false);
@@ -75,13 +76,13 @@ export function FolderCard({
                 {
                   disabled: isSubmitting,
                   label: 'Rename Folder',
-                  onSelect: () => setIsRenameModalOpen(true),
+                  onSelect: renameModal.open,
                 },
                 {
                   danger: true,
                   disabled: isSubmitting,
                   label: 'Delete Folder',
-                  onSelect: () => setIsDeleteModalOpen(true),
+                  onSelect: deleteModal.open,
                 },
               ]}
             />
@@ -115,24 +116,24 @@ export function FolderCard({
         </div>
       </div>
 
-      {isRenameModalOpen ? (
+      {renameModal.isOpen ? (
         <FolderFormModal
           description={`Rename ${folder.name}.`}
           initialName={folder.name}
           isSubmitting={isSubmitting}
-          onClose={() => setIsRenameModalOpen(false)}
+          onClose={renameModal.close}
           onSubmit={handleRename}
           submitLabel="Save Changes"
           title="Rename Folder"
         />
       ) : null}
 
-      {isDeleteModalOpen ? (
+      {deleteModal.isOpen ? (
         <ConfirmationModal
           confirmLabel="Delete Folder"
           description={`Delete "${folder.name}" and every nested subfolder inside this branch.`}
           isLoading={isSubmitting}
-          onClose={() => setIsDeleteModalOpen(false)}
+          onClose={deleteModal.close}
           onConfirm={handleDelete}
           title="Delete Folder?"
         />

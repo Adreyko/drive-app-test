@@ -9,40 +9,35 @@ import {
   useRenameFolderMutation,
 } from '@/api/folders/folders.queries';
 import type { FolderItem } from '@/api/folders/folders.model';
+import type { DriveWorkspaceState } from '@/shared/features/drive/hooks/use-drive-workspace-state';
 
-type UseFolderBrowserActionsOptions = Readonly<{
-  closeCurrentFolderDeleteModal: () => void;
+type UseFolderWorkspaceActionsOptions = Readonly<{
   currentFolder: FolderItem | null;
-  currentFolderId: string | null;
-  resetFeedback: () => void;
-  setCurrentFolderId: (folderId: string | null) => void;
-  showError: (message: string) => void;
+  state: Pick<DriveWorkspaceState, 'feedback' | 'location' | 'modals'>;
 }>;
 
-export function useFolderBrowserActions({
-  closeCurrentFolderDeleteModal,
+export function useFolderWorkspaceActions({
   currentFolder,
-  currentFolderId,
-  resetFeedback,
-  setCurrentFolderId,
-  showError,
-}: UseFolderBrowserActionsOptions) {
+  state,
+}: UseFolderWorkspaceActionsOptions) {
   const queryClient = useQueryClient();
   const createFolderMutation = useCreateFolderMutation();
   const renameFolderMutation = useRenameFolderMutation();
   const deleteFolderMutation = useDeleteFolderMutation();
 
   async function createFolder(name: string): Promise<boolean> {
-    resetFeedback();
+    state.feedback.resetFeedback();
 
     try {
       await createFolderMutation.mutateAsync({
         name: name.trim(),
-        parentId: currentFolderId,
+        parentId: state.location.currentFolderId,
       });
       return true;
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Could not create folder.'));
+      state.feedback.showError(
+        getApiErrorMessage(error, 'Could not create folder.'),
+      );
       return false;
     }
   }
@@ -51,7 +46,7 @@ export function useFolderBrowserActions({
     folder: FolderItem,
     nextName: string,
   ): Promise<boolean> {
-    resetFeedback();
+    state.feedback.resetFeedback();
 
     try {
       await renameFolderMutation.mutateAsync({
@@ -61,7 +56,9 @@ export function useFolderBrowserActions({
 
       return true;
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Could not rename folder.'));
+      state.feedback.showError(
+        getApiErrorMessage(error, 'Could not rename folder.'),
+      );
 
       return false;
     }
@@ -76,7 +73,7 @@ export function useFolderBrowserActions({
   }
 
   async function deleteFolder(folder: FolderItem): Promise<void> {
-    resetFeedback();
+    state.feedback.resetFeedback();
 
     try {
       await deleteFolderMutation.mutateAsync(folder.id);
@@ -84,11 +81,13 @@ export function useFolderBrowserActions({
         queryKey: filesQueryKeys.all,
       });
 
-      if (currentFolderId === folder.id) {
-        setCurrentFolderId(folder.parentId);
+      if (state.location.currentFolderId === folder.id) {
+        state.location.setCurrentFolderId(folder.parentId);
       }
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Could not delete folder.'));
+      state.feedback.showError(
+        getApiErrorMessage(error, 'Could not delete folder.'),
+      );
     }
   }
 
@@ -98,7 +97,7 @@ export function useFolderBrowserActions({
     }
 
     await deleteFolder(currentFolder);
-    closeCurrentFolderDeleteModal();
+    state.modals.closeCurrentFolderDeleteModal();
   }
 
   return {

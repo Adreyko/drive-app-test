@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import { useDisclosure } from '@/shared/hooks/use-disclosure';
 
 type ActionMenuItem = Readonly<{
   danger?: boolean;
@@ -21,7 +22,9 @@ export function ActionMenu({
   items,
   label = 'More actions',
 }: ActionMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const menu = useDisclosure();
+  const isOpen = menu.isOpen;
+  const closeMenu = menu.close;
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -31,13 +34,13 @@ export function ActionMenu({
 
     function handlePointerDown(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
+        closeMenu();
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsOpen(false);
+        closeMenu();
       }
     }
 
@@ -48,7 +51,7 @@ export function ActionMenu({
       window.removeEventListener('mousedown', handlePointerDown);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [closeMenu, isOpen]);
 
   return (
     <div className="relative" ref={containerRef}>
@@ -60,7 +63,7 @@ export function ActionMenu({
           'neo-button bg-white px-0 text-base leading-none tracking-normal',
           compact ? 'h-9 w-9 text-sm' : 'h-10 w-10',
         )}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={menu.toggle}
         type="button"
       >
         ...
@@ -82,7 +85,7 @@ export function ActionMenu({
                 disabled={item.disabled}
                 key={item.label}
                 onClick={() => {
-                  setIsOpen(false);
+                  closeMenu();
                   item.onSelect();
                 }}
                 role="menuitem"

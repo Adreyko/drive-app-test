@@ -1,23 +1,12 @@
-import type { FileItem, UpdateFileInput } from '@/api/files/files.model';
 import { StatePanel } from '@/components/ui/state-panel';
-import type { FolderSelectOption } from '@/shared/features/folders/utils/folder-tree';
+import type { DriveWorkspaceSharedFilesSection } from '@/shared/features/drive/hooks/use-drive-workspace';
 import { FileCard } from './file-card';
 
 type SharedFilesPanelProps = Readonly<{
-  files: FileItem[];
-  folderOptions: FolderSelectOption[];
-  onDelete: (file: FileItem) => Promise<void>;
-  onOpen: (file: FileItem) => Promise<void>;
-  onUpdate: (file: FileItem, input: UpdateFileInput) => Promise<boolean>;
+  section: DriveWorkspaceSharedFilesSection;
 }>;
 
-export function SharedFilesPanel({
-  files,
-  folderOptions,
-  onDelete,
-  onOpen,
-  onUpdate,
-}: SharedFilesPanelProps) {
+export function SharedFilesPanel({ section }: SharedFilesPanelProps) {
   return (
     <article className="neo-card bg-white p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -32,24 +21,24 @@ export function SharedFilesPanel({
             Shared files and public files from other users are listed here.
           </p>
         </div>
-        <div className="neo-badge bg-mint">{files.length} files</div>
+        <div className="neo-badge bg-mint">{section.files.length} files</div>
       </div>
 
-      {files.length === 0 ? null : (
+      {section.files.length === 0 ? null : (
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {files.map((file) => (
+          {section.files.map((file) => (
             <FileCard
               file={file}
-              folderOptions={folderOptions}
+              folderOptions={section.folderOptions}
               key={file.id}
-              onDelete={onDelete}
-              onOpen={onOpen}
-              onUpdate={onUpdate}
+              onDelete={section.onDelete}
+              onOpen={section.onOpen}
+              onUpdate={section.onUpdate}
             />
           ))}
         </div>
       )}
-      {files.length === 0 ? (
+      {section.files.length === 0 ? (
         <StatePanel
           badge="Share"
           className="mt-4"

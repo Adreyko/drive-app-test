@@ -1,29 +1,14 @@
-import type { FileItem, UpdateFileInput } from '@/api/files/files.model';
 import { StatePanel } from '@/components/ui/state-panel';
-import type { FolderSelectOption } from '@/shared/features/folders/utils/folder-tree';
+import type { DriveWorkspaceFilesSection } from '@/shared/features/drive/hooks/use-drive-workspace';
 import { truncateLongWords } from '@/shared/utils/truncate-long-words';
 import { FileCard } from './file-card';
 
 type FileListProps = Readonly<{
-  currentFolderName: string | null;
-  files: FileItem[];
-  folderOptions: FolderSelectOption[];
-  onDelete: (file: FileItem) => Promise<void>;
-  onOpen: (file: FileItem) => Promise<void>;
-  onShare: (file: FileItem) => void;
-  onUpdate: (file: FileItem, input: UpdateFileInput) => Promise<boolean>;
+  section: DriveWorkspaceFilesSection;
 }>;
 
-export function FileList({
-  currentFolderName,
-  files,
-  folderOptions,
-  onDelete,
-  onOpen,
-  onShare,
-  onUpdate,
-}: FileListProps) {
-  const locationLabel = truncateLongWords(currentFolderName ?? 'Root');
+export function FileList({ section }: FileListProps) {
+  const locationLabel = truncateLongWords(section.currentFolderName ?? 'Root');
 
   return (
     <article className="neo-card bg-white p-4">
@@ -34,30 +19,30 @@ export function FileList({
           </p>
           <h2
             className="mt-1 font-display text-xl leading-tight text-ink md:text-2xl"
-            title={`${currentFolderName ?? 'Root'} Files`}
+            title={`${section.currentFolderName ?? 'Root'} Files`}
           >
             {locationLabel} Files
           </h2>
         </div>
-        <div className="neo-badge bg-lemon">{files.length} files</div>
+        <div className="neo-badge bg-lemon">{section.files.length} files</div>
       </div>
 
-      {files.length === 0 ? null : (
+      {section.files.length === 0 ? null : (
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {files.map((file) => (
+          {section.files.map((file) => (
             <FileCard
               file={file}
-              folderOptions={folderOptions}
+              folderOptions={section.folderOptions}
               key={file.id}
-              onDelete={onDelete}
-              onOpen={onOpen}
-              onShare={onShare}
-              onUpdate={onUpdate}
+              onDelete={section.onDelete}
+              onOpen={section.onOpen}
+              onShare={section.onShare}
+              onUpdate={section.onUpdate}
             />
           ))}
         </div>
       )}
-      {files.length === 0 ? (
+      {section.files.length === 0 ? (
         <StatePanel
           badge="Upload"
           className="mt-4"
