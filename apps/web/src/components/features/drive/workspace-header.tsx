@@ -1,17 +1,34 @@
 'use client';
 
 import type { AuthUser } from '@/api/auth/auth.model';
+import type { FileItem } from '@/api/files/files.model';
+import type { WorkspaceSearchResponse } from '@/api/search/search.model';
 import { Button } from '@/components/ui/button';
+import { WorkspaceSearch } from './workspace-search';
 
 type WorkspaceHeaderProps = Readonly<{
   isSigningOut: boolean;
+  isSearchLoading: boolean;
+  onOpenSearchFile: (file: FileItem) => void;
+  onOpenSearchFolder: (folderId: string) => void;
+  onResetSearch: () => void;
+  onSearchChange: (value: string) => void;
   onSignOut: () => void;
+  searchQuery: string;
+  searchResults?: WorkspaceSearchResponse;
   user: AuthUser;
 }>;
 
 export function WorkspaceHeader({
   isSigningOut,
+  isSearchLoading,
+  onOpenSearchFile,
+  onOpenSearchFolder,
+  onResetSearch,
+  onSearchChange,
   onSignOut,
+  searchQuery,
+  searchResults,
   user,
 }: WorkspaceHeaderProps) {
   const userInitial = user.email.charAt(0).toUpperCase() || '?';
@@ -27,6 +44,16 @@ export function WorkspaceHeader({
             Files And Folders
           </h1>
         </div>
+
+        <WorkspaceSearch
+          isLoading={isSearchLoading}
+          onChange={onSearchChange}
+          onOpenFile={onOpenSearchFile}
+          onOpenFolder={onOpenSearchFolder}
+          onReset={onResetSearch}
+          query={searchQuery}
+          results={searchResults}
+        />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="neo-card flex items-center gap-3 bg-sky px-3 py-2.5">

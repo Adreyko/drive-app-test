@@ -6,9 +6,9 @@ import { useDriveWorkspaceData } from './use-drive-workspace-data';
 import { useDriveWorkspaceState } from './use-drive-workspace-state';
 import { useDriveWorkspaceViewModel } from './use-drive-workspace-view-model';
 
-export function useDriveWorkspace() {
+export function useDriveWorkspace(enabled = true) {
   const state = useDriveWorkspaceState();
-  const data = useDriveWorkspaceData();
+  const data = useDriveWorkspaceData(enabled);
 
   useUnauthorizedRedirect(data.authError);
 

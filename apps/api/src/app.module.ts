@@ -7,6 +7,7 @@ import { FilesModule } from './files/files.module';
 import { FoldersModule } from './folders/folders.module';
 import { HealthModule } from './health/health.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     FoldersModule,
     HealthModule,
     RealtimeModule,
+    SearchModule,
   ],
 })
 export class AppModule {}

@@ -7,7 +7,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { ILike, Not, Repository } from 'typeorm';
 import { Folder } from '../folders/entities/folder.entity';
 import { RealtimeService } from '../realtime/realtime.service';
 import { UsersService } from '../users/users.service';
@@ -81,24 +81,65 @@ export class FilesService {
       }),
     ]);
 
-    const itemsByFileId = new Map<string, FileListItem>();
+    return this.mergeVisibleFileItems(ownedFiles, sharedAccesses, publicFiles);
+  }
 
-    for (const file of publicFiles) {
-      itemsByFileId.set(file.id, toFileListItem(file, FileAccessRole.VIEWER));
+  async searchVisibleForUser(
+    userId: string,
+    query: string,
+  ): Promise<FileListItem[]> {
+    const normalizedQuery = query.trim();
+
+    if (!normalizedQuery) {
+      return [];
     }
 
-    for (const access of sharedAccesses) {
-      itemsByFileId.set(access.file.id, toFileListItem(access.file, access.role));
-    }
+    const likePattern = `%${normalizedQuery}%`;
+    const [ownedFiles, sharedAccesses, publicFiles] = await Promise.all([
+      this.filesRepository.find({
+        where: {
+          ownerId: userId,
+          name: ILike(likePattern),
+        },
+        relations: {
+          owner: true,
+        },
+        order: {
+          updatedAt: 'DESC',
+        },
+        take: 10,
+      }),
+      this.fileAccessRepository.find({
+        where: {
+          userId,
+          file: {
+            name: ILike(likePattern),
+          },
+        },
+        relations: {
+          file: {
+            owner: true,
+          },
+        },
+        take: 10,
+      }),
+      this.filesRepository.find({
+        where: {
+          ownerId: Not(userId),
+          visibility: FileVisibility.PUBLIC,
+          name: ILike(likePattern),
+        },
+        relations: {
+          owner: true,
+        },
+        order: {
+          updatedAt: 'DESC',
+        },
+        take: 10,
+      }),
+    ]);
 
-    for (const file of ownedFiles) {
-      itemsByFileId.set(file.id, toFileListItem(file, 'owner'));
-    }
-
-    return [...itemsByFileId.values()].sort(
-      (left, right) =>
-        new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
-    );
+    return this.mergeVisibleFileItems(ownedFiles, sharedAccesses, publicFiles);
   }
 
   async createUploadUrl(
@@ -420,6 +461,31 @@ export class FilesService {
     const { file, accessRole } = await this.getAccessibleFileOrFail(userId, fileId);
 
     return toFileListItem(file, accessRole);
+  }
+
+  private mergeVisibleFileItems(
+    ownedFiles: File[],
+    sharedAccesses: FileAccess[],
+    publicFiles: File[],
+  ): FileListItem[] {
+    const itemsByFileId = new Map<string, FileListItem>();
+
+    for (const file of publicFiles) {
+      itemsByFileId.set(file.id, toFileListItem(file, FileAccessRole.VIEWER));
+    }
+
+    for (const access of sharedAccesses) {
+      itemsByFileId.set(access.file.id, toFileListItem(access.file, access.role));
+    }
+
+    for (const file of ownedFiles) {
+      itemsByFileId.set(file.id, toFileListItem(file, 'owner'));
+    }
+
+    return [...itemsByFileId.values()].sort(
+      (left, right) =>
+        new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+    );
   }
 
   private async notifyFileChange(

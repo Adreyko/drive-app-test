@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateFolderDto } from './dto/update-folder.dto';
@@ -38,6 +38,25 @@ export class FoldersService {
     return this.foldersRepository.find({
       where: { ownerId },
       order: { createdAt: 'ASC' },
+    });
+  }
+
+  searchForOwner(ownerId: string, query: string): Promise<Folder[]> {
+    const normalizedQuery = query.trim();
+
+    if (!normalizedQuery) {
+      return Promise.resolve([]);
+    }
+
+    return this.foldersRepository.find({
+      where: {
+        ownerId,
+        name: ILike(`%${normalizedQuery}%`),
+      },
+      order: {
+        name: 'ASC',
+      },
+      take: 10,
     });
   }
 

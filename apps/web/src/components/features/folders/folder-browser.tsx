@@ -6,12 +6,15 @@ import { FileList } from '@/components/features/files/file-list';
 import { SharedFilesPanel } from '@/components/features/files/shared-files-panel';
 import { Button } from '@/components/ui/button';
 import { StatePanel } from '@/components/ui/state-panel';
-import { useDriveWorkspace } from '@/shared/features/drive/hooks/use-drive-workspace';
+import type { DriveWorkspace } from '@/shared/features/drive/hooks/use-drive-workspace';
 import { CurrentFolderPanel } from './current-folder-panel';
 import { FoldersSection } from './folders-section';
 
-export function FolderBrowser() {
-  const workspace = useDriveWorkspace();
+type FolderBrowserProps = Readonly<{
+  workspace: DriveWorkspace;
+}>;
+
+export function FolderBrowser({ workspace }: FolderBrowserProps) {
 
   if (workspace.status.isLoading) {
     return (
