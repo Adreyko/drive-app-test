@@ -29,9 +29,11 @@ import { SearchModule } from './search/search.module';
         synchronize: configService.getOrThrow<boolean>('DB_SYNC', {
           infer: true,
         }),
-        ssl: {
-          rejectUnauthorized: false,
-        },
+
+        ssl:
+          configService.get<string>('DB_SSL') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
       }),
     }),
     AuthModule,
